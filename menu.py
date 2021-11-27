@@ -3,11 +3,11 @@ import curses
 
 def get_menu_choice( p_stdscr, p_choice_strs_list ) :
 	# Clear the screen
-	p_stdscr.clear()
+	#p_stdscr.clear()
 	# Get the size of the screen
-	l_size_yx = p_stdscr.getmaxyx()
+	l_scr_size_yx = p_stdscr.getmaxyx()
 	# Calculate half width and height
-	l_center_yx = ( int( l_size_yx[ 0 ] / 2 ), int( l_size_yx[ 1 ] / 2 ) )
+	l_center_yx = ( int( l_scr_size_yx[ 0 ] / 2 ), int( l_scr_size_yx[ 1 ] / 2 ) )
 	# Find widest choice string
 	l_widest_int = len( p_choice_strs_list[ 'title' ] )
 	for itm_idx, itm_str in enumerate( p_choice_strs_list[ 'choices' ] ) :
