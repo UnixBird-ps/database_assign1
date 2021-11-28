@@ -128,7 +128,7 @@ def sqlite_get( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
 def sqlite_get_pretty( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
 	g_db_result = sqlite_get( p_db_file_name_str, p_sql_query_str, p_values )
 	g_head_cols = g_db_result[ 0 ]
-	g_col_width_list = [ ]
+	g_col_width_list = []
 	for b_n in range( len( g_head_cols ) ): g_col_width_list.append( 0 )
 
 	# put column header in the list
