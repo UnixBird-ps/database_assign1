@@ -42,12 +42,12 @@ def _redraw_main_screen( p_stdscr, p_lists = [] ) :
 	_redraw_main_bars( p_stdscr )
 	# try :
 	for item in p_lists :
-		item.m_curses_win_obj.refresh()
 		rectangle(
 			p_stdscr,
 			item.m_top_int, item.m_left_int,
 			item.m_top_int + item.m_height_int, item.m_left_int + item.m_width_int
 		)
+		item.redraw_list()
 	# except :
 	# 	pass
 
@@ -56,8 +56,8 @@ def main( p_stdscr ) :
 	# Hide blinking cursor
 	curses.curs_set( 0 )
 	# Enable scrolling
-	p_stdscr.scrollok( True )
-	p_stdscr.idlok( 1 )
+	# p_stdscr.scrollok( True )
+	# p_stdscr.idlok( 1 )
 
 	# Define 4 lists for UI: #1 artists, #2 albums, #3 songs, #4 log
 	l_available_screen_width = curses.COLS
@@ -141,6 +141,11 @@ def main( p_stdscr ) :
 	l_lists[ 2 ].m_curses_win_obj.addstr( 1, 1, 'Songs list' )
 	l_lists[ 3 ].m_curses_win_obj.addstr( 1, 1, 'Logs list' )
 
+	l_lists[ 0 ].redraw_list()
+	l_lists[ 1 ].redraw_list()
+	l_lists[ 2 ].redraw_list()
+	l_lists[ 3 ].redraw_list()
+
 	db_file_name_str = 'music.sqlite'
 	# Init database and create tables, if new
 	init_db( db_file_name_str )
@@ -179,8 +184,9 @@ def main( p_stdscr ) :
 
 	app_quit_flag = False
 	while not app_quit_flag :
+		p_stdscr.clear()
 		_redraw_main_screen( p_stdscr, l_lists )
-		p_stdscr.refresh()
+		#p_stdscr.refresh()
 		l_input_key = p_stdscr.getch()
 		p_stdscr.addstr( 2, 0, str( l_input_key ) )
 		global _selected_list
@@ -189,7 +195,7 @@ def main( p_stdscr ) :
 				_selected_list += 1
 				if _selected_list >= len( l_lists ) : _selected_list = 0
 				l_lists[ _selected_list ].m_curses_win_obj.refresh()
-			case 351 : # Missing curses.KEY_TAB
+			case 351 : # Missing SHIFT + curses.KEY_TAB
 				_selected_list -= 1
 				if _selected_list < 0 : _selected_list = len( l_lists ) - 1
 				if _selected_list < 0 : _selected_list = 0
@@ -209,12 +215,11 @@ def main( p_stdscr ) :
 				#p_stdscr.clear()
 			case curses.KEY_F10 :
 				# The quit dialog
-				#_redraw_main_bars( p_stdscr )
-				l_quit_menu_choice = get_menu_choice( p_stdscr, l_quit_menu_choices )
 				p_stdscr.clear()
-				l_lists[ 0 ].m_curses_win_obj.refresh()
-				l_lists[ 1 ].m_curses_win_obj.refresh()
-				_redraw_main_screen( p_stdscr, l_lists )
+				_redraw_main_bars( p_stdscr )
+				l_quit_menu_choice = get_menu_choice( p_stdscr, l_quit_menu_choices )
+				#p_stdscr.clear()
+				#_redraw_main_screen( p_stdscr, l_lists )
 				match l_quit_menu_choice :
 					case 0:
 						pass
