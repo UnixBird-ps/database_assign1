@@ -41,124 +41,56 @@ def _redraw_main_bars( p_stdscr ) :
 def _redraw_main_screen( p_stdscr, p_lists = [] ) :
 	_redraw_main_bars( p_stdscr )
 	# try :
-	for item in p_lists :
-		rectangle(
-			p_stdscr,
-			item.m_top_int, item.m_left_int,
-			item.m_top_int + item.m_height_int, item.m_left_int + item.m_width_int
-		)
-		item.redraw_list()
+	for item_idx, item in enumerate( p_lists ) :
+		if item_idx == _selected_list :
+			item.redraw_list( True )
+		else :
+			item.redraw_list( False )
 	# except :
 	# 	pass
 
 
 def main( p_stdscr ) :
+
 	# Hide blinking cursor
 	curses.curs_set( 0 )
 	# Enable scrolling
 	# p_stdscr.scrollok( True )
 	# p_stdscr.idlok( 1 )
+	curses.init_pair( 1, curses.COLOR_WHITE, curses.COLOR_BLACK )
 
 	# Define 4 lists for UI: #1 artists, #2 albums, #3 songs, #4 log
 	l_available_screen_width = curses.COLS
 	l_available_screen_height = curses.LINES - 3
 	l_lists = []
-	# l_lists.append(
-	# 	{
-	# 		'name' : 'artists',
-	# 		'editable' : True,
-	# 		'items' : [],
-	# 		'selected_item' : 0,
-	# 		'top' : 1,
-	# 		'left' : 0,
-	# 		'height' : int( l_available_screen_height * 0.75 ),
-	# 		'width' : int( l_available_screen_width / 3 ) - 1,
-	# 		'curses_win' : curses.window
-	# 	}
-	# )
-	# l_available_screen_width -= ( l_lists[ 0 ][ 'left' ] + l_lists[ 0 ][ 'width' ] + 1 )
-	# l_lists.append(
-	# 	{
-	# 		'name' : 'albums',
-	# 		'editable' : True,
-	# 		'items' : [],
-	# 		'selected_item' : 0,
-	# 		'top' : 1,
-	# 		'left' : l_lists[ 0 ][ 'left' ] + l_lists[ 0 ][ 'width' ] + 1,
-	# 		'height' : int( l_available_screen_height * 0.75 ),
-	# 		'width' : int( l_available_screen_width / 2 ) - 1,
-	# 		'curses_win' : curses.window
-	# 	}
-	# )
-	# l_available_screen_width -= ( l_lists[ 1 ][ 'width' ] + 1 )
-	# l_lists.append(
-	# 	{
-	# 		'name' : 'songs',
-	# 		'editable' : True,
-	# 		'items' : [],
-	# 		'selected_item' : 0,
-	# 		'top' : 1,
-	# 		'left' : l_lists[ 1 ][ 'left' ] + l_lists[ 1 ][ 'width' ] + 1,
-	# 		'height' : int( l_available_screen_height * 0.75 ),
-	# 		'width' : l_available_screen_width - 1,
-	# 		'curses_win' : curses.window
-	# 	}
-	# )
-	# l_available_screen_height -= ( l_lists[ 0 ][ 'height' ] + 1 )
-	# l_lists.append(
-	# 	{
-	# 		'name' : 'log',
-	# 		'editable' : False,
-	# 		'items' : [],
-	# 		'selected_item' : 0,
-	# 		'top' : l_lists[ 0 ][ 'top' ] + l_lists[ 0 ][ 'height' ] + 1,
-	# 		'left' : 0,
-	# 		'height' : l_available_screen_height,
-	# 		'width' : curses.COLS - 1,
-	# 		'curses_win' : curses.window
-	# 	}
-	# )
-	# l_lists[ 0 ][ 'curses_win' ] = curses.newwin( l_lists[ 0 ][ 'height' ], l_lists[ 0 ][ 'width' ], l_lists[ 0 ][ 'top' ], l_lists[ 0 ][ 'left' ] )
-	# l_lists[ 1 ][ 'curses_win' ] = curses.newwin( l_lists[ 1 ][ 'height' ], l_lists[ 1 ][ 'width' ], l_lists[ 1 ][ 'top' ], l_lists[ 1 ][ 'left' ] )
-	# l_lists[ 2 ][ 'curses_win' ] = curses.newwin( l_lists[ 2 ][ 'height' ], l_lists[ 2 ][ 'width' ], l_lists[ 2 ][ 'top' ], l_lists[ 2 ][ 'left' ] )
-	# l_lists[ 3 ][ 'curses_win' ] = curses.newwin( l_lists[ 3 ][ 'height' ], l_lists[ 3 ][ 'width' ], l_lists[ 3 ][ 'top' ], l_lists[ 3 ][ 'left' ] )
-	# l_lists[ 0 ][ 'curses_win' ].clear()
-	# l_lists[ 0 ][ 'curses_win' ].addstr( 'Hello World!' )
-	# l_lists[ 0 ][ 'curses_win' ].border()
 
 	#for item in l_lists : print( item )
-
-	l_lists.append( ScrollList( p_stdscr, 'artists', True, 1, 0, int( l_available_screen_height * 0.75 ) - 3, int( l_available_screen_width / 3 ) - 1 ) )
-	l_available_screen_width -= ( l_lists[ 0 ].m_left_int + l_lists[ 0 ].m_width_int + 1 )
-	l_lists.append( ScrollList( p_stdscr, 'albums' , True, 1, l_lists[ 0 ].m_left_int + l_lists[ 0 ].m_width_int + 1, int( l_available_screen_height * 0.75 ) - 3, int( l_available_screen_width / 2 ) - 1 ) )
-	l_available_screen_width -= ( l_lists[ 1 ].m_width_int + 1 )
-	l_lists.append( ScrollList( p_stdscr, 'songs'  , True, 1, l_lists[ 1 ].m_left_int + l_lists[ 1 ].m_width_int + 1, int( l_available_screen_height * 0.75 ) - 3, l_available_screen_width - 1 ) )
-	l_available_screen_height -= ( l_lists[ 0 ].m_height_int + 1 + 3 )
-	l_lists.append( ScrollList( p_stdscr, 'log'    , False, l_lists[ 0 ].m_top_int + l_lists[ 0 ].m_height_int + 1 + 3, 0, l_available_screen_height, curses.COLS -1 ) )
-
-	l_lists[ 0 ].m_curses_win_obj.addstr( 1, 1, 'Artists list' )
-	l_lists[ 1 ].m_curses_win_obj.addstr( 1, 1, 'Albums list' )
-	l_lists[ 2 ].m_curses_win_obj.addstr( 1, 1, 'Songs list' )
-	l_lists[ 3 ].m_curses_win_obj.addstr( 1, 1, 'Logs list' )
-
-	l_lists[ 0 ].redraw_list()
-	l_lists[ 1 ].redraw_list()
-	l_lists[ 2 ].redraw_list()
-	l_lists[ 3 ].redraw_list()
 
 	db_file_name_str = 'music.sqlite'
 	# Init database and create tables, if new
 	init_db( db_file_name_str )
+
+	l_lists.append( ScrollList( p_stdscr, 'artists', True, int( l_available_screen_height * 0.75 ) - 3, int( l_available_screen_width / 3 ) - 2, 2, 1 ) )
+	l_available_screen_width -= ( l_lists[ 0 ].m_left_int + l_lists[ 0 ].m_cols_int + 2 )
+	l_lists.append( ScrollList( p_stdscr, 'albums' , True, int( l_available_screen_height * 0.75 ) - 3, int( l_available_screen_width / 2 ) - 2, 2, l_lists[ 0 ].m_left_int + l_lists[ 0 ].m_cols_int + 2 ) )
+	l_available_screen_width -= ( l_lists[ 1 ].m_cols_int + 1 )
+	l_lists.append( ScrollList( p_stdscr, 'songs'  , True, int( l_available_screen_height * 0.75 ) - 3, l_available_screen_width - 2, 2, l_lists[ 1 ].m_left_int + l_lists[ 1 ].m_cols_int + 2 ) )
+	l_available_screen_height -= ( l_lists[ 0 ].m_lines_int + 1 + 4 )
+	l_lists.append( ScrollList( p_stdscr, 'log'    , False, l_available_screen_height, curses.COLS - 2, l_lists[ 0 ].m_top_int + l_lists[ 0 ].m_lines_int + 1 + 3, 1 ) )
+
 	# Populate UI lists with data from database
-	query_result = sqlite_get( db_file_name_str, 'SELECT * FROM artists' )
-	for row in query_result[ 2 ] :
-		l_lists[ 0 ].m_items_list.append( row )
-	query_result = sqlite_get( db_file_name_str, 'SELECT * FROM albums' )
-	for row in query_result[ 2 ] :
-		l_lists[ 1 ].m_items_list.append( row )
-	query_result = sqlite_get( db_file_name_str, 'SELECT * FROM songs' )
-	for row in query_result[ 2 ] :
-		l_lists[ 2 ].m_items_list.append( row )
+	if len( l_lists ) > 0 :
+		query_result = sqlite_get( db_file_name_str, 'SELECT * FROM artists' )
+		for row_idx, row in enumerate( query_result[ 2 ] ) :
+			l_lists[ 0 ].m_items_list.append( ( row_idx, row ) )
+	if len( l_lists ) > 1 :
+		query_result = sqlite_get( db_file_name_str, 'SELECT * FROM albums' )
+		for row_idx, row in enumerate( query_result[ 2 ] ) :
+			l_lists[ 1 ].m_items_list.append( ( row_idx, row ) )
+	if len( l_lists ) > 2 :
+		query_result = sqlite_get( db_file_name_str, 'SELECT * FROM songs' )
+		for row_idx, row in enumerate( query_result[ 2 ] ) :
+			l_lists[ 2 ].m_items_list.append( ( row_idx, row ) )
 
 	# Create menus
 	l_quit_menu_choices =\
@@ -184,12 +116,12 @@ def main( p_stdscr ) :
 
 	app_quit_flag = False
 	while not app_quit_flag :
+		global _selected_list
 		p_stdscr.clear()
 		_redraw_main_screen( p_stdscr, l_lists )
 		#p_stdscr.refresh()
 		l_input_key = p_stdscr.getch()
 		p_stdscr.addstr( 2, 0, str( l_input_key ) )
-		global _selected_list
 		match l_input_key :
 			case 9 : # Missing curses.KEY_TAB
 				_selected_list += 1
@@ -224,6 +156,8 @@ def main( p_stdscr ) :
 					case 0:
 						pass
 					case 1 : app_quit_flag = True
+			case curses.KEY_UP   : l_lists[ _selected_list ].scroll_rel( -1 )
+			case curses.KEY_DOWN : l_lists[ _selected_list ].scroll_rel(  1 )
 
 	# Restore blinking cursor
 	curses.curs_set( 1 )

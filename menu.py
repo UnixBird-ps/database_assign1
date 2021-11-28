@@ -24,8 +24,8 @@ def get_menu_choice( p_stdscr, p_choice_strs_list ) :
 	l_selected_int = 0
 	while l_user_key not in [ curses.KEY_ENTER, 10, 13 ]:
 		# Make sure selected index is within boundery
-		if l_selected_int < 0 : l_selected_int = 0
 		if l_selected_int > len( p_choice_strs_list[ 'choices' ] ) - 1: l_selected_int = len( p_choice_strs_list[ 'choices' ] ) - 1
+		if l_selected_int < 0 : l_selected_int = 0
 		# Display the menu
 		for itm_idx, itm_str in enumerate( p_choice_strs_list[ 'choices' ] ):
 			l_widen_str = itm_str.center( l_widest_int + 2 )
