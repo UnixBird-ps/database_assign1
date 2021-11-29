@@ -37,7 +37,7 @@ def _redraw_status_bar( p_stdscr, p_right_justified_str ) :
 
 def _redraw_main_bars( p_stdscr ) :
 	_redraw_title_bar( p_stdscr, _app_title )
-	_redraw_status_bar( p_stdscr, f'Selected list: {l_lists[ _selected_list ].m_name_str.title()}' + '    ↑/↓:Scroll Up/Down    ENTER:Select    TAB:Switch List    F8:Add    F3:Search    F10:Quit ' )
+	_redraw_status_bar( p_stdscr, '↑/↓:Scroll Up/Down    ENTER:Activate    TAB:Switch List    F8:Add    Del:Remove    F3:Search    F10:Quit ' )
 
 
 def _redraw_main_screen( p_stdscr, p_lists = [] ) :
@@ -77,10 +77,13 @@ def main( p_stdscr ) :
 	l_available_screen_width -= ( l_lists[ 0 ].m_left_int + l_lists[ 0 ].m_cols_int + 2 )
 	l_lists.append( ScrollList( p_stdscr, 'albums' , True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 2 ), 1, l_lists[ 0 ].m_left_int + l_lists[ 0 ].m_cols_int + 1 ) )
 	l_available_screen_width -= ( l_lists[ 1 ].m_cols_int + 1 )
-	l_lists.append( ScrollList( p_stdscr, 'songs'  , True, int( l_available_screen_height - 8 ), l_available_screen_width, 1, l_lists[ 1 ].m_left_int + l_lists[ 1 ].m_cols_int + 1 ) )
+	l_lists.append( ScrollList( p_stdscr, 'songs'  , True, int( l_available_screen_height - 8 ), l_available_screen_width, 1, l_lists[ 1 ].m_left_int + l_lists[ 1 ].m_cols_int + 1, [ curses.KEY_ENTER, 13, 10 ] ) )
 	l_available_screen_height -= ( l_lists[ 0 ].m_lines_int + 2 )
-	l_lists.append( ScrollList( p_stdscr, 'log'    , False, l_available_screen_height, curses.COLS - 1, l_lists[ 0 ].m_top_int + l_lists[ 0 ].m_lines_int + 1, 0 ) )
+	l_lists.append( ScrollList( p_stdscr, 'log'    , False, l_available_screen_height, curses.COLS - 1, l_lists[ 0 ].m_top_int + l_lists[ 0 ].m_lines_int + 1, 0, [ curses.KEY_ENTER, 13, 10 ] ) )
 	_log_list_id_int = len( l_lists ) - 1
+
+	l_lists[ _log_list_id_int ].add_item( [ f'curses.COLORS: { curses.COLORS }' ] )
+	l_lists[ _log_list_id_int ].add_item( [ f'curses.COLOR_PAIRS: { curses.COLOR_PAIRS }' ] )
 
 	# Populate UI lists with data from database
 	l_lists[ _log_list_id_int ].add_item( [ "Populating 'Artists' list..." ] )
@@ -89,29 +92,20 @@ def main( p_stdscr ) :
 		for row_idx, row in enumerate( query_result[ 2 ] ) :
 			l_lists[ 0 ].add_item( row )
 	l_lists[ _log_list_id_int ].add_item( [ 'Done' ] )
-	l_lists[ _log_list_id_int ].add_item( [ "Populating 'Albums' list..." ] )
-	if len( l_lists ) > 1 :
-		query_result = sqlite_get( db_file_name_str, 'SELECT * FROM albums' )
-		for row_idx, row in enumerate( query_result[ 2 ] ) :
-			l_lists[ 1 ].add_item( row )
-	l_lists[ _log_list_id_int ].add_item( [ 'Done' ] )
-	l_lists[ _log_list_id_int ].add_item( [ "Populating 'Songs' list..." ] )
-	if len( l_lists ) > 2 :
-		query_result = sqlite_get( db_file_name_str, 'SELECT * FROM songs' )
-		for row_idx, row in enumerate( query_result[ 2 ] ) :
-			l_lists[ 2 ].add_item( row )
-	l_lists[ _log_list_id_int ].add_item( [ 'Done' ] )
+	# l_lists[ _log_list_id_int ].add_item( [ "Populating 'Albums' list..." ] )
+	# if len( l_lists ) > 1 :
+	# 	query_result = sqlite_get( db_file_name_str, 'SELECT * FROM albums' )
+	# 	for row_idx, row in enumerate( query_result[ 2 ] ) :
+	# 		l_lists[ 1 ].add_item( row )
+	# l_lists[ _log_list_id_int ].add_item( [ 'Done' ] )
+	# l_lists[ _log_list_id_int ].add_item( [ "Populating 'Songs' list..." ] )
+	# if len( l_lists ) > 2 :
+	# 	query_result = sqlite_get( db_file_name_str, 'SELECT * FROM songs' )
+	# 	for row_idx, row in enumerate( query_result[ 2 ] ) :
+	# 		l_lists[ 2 ].add_item( row )
+	# l_lists[ _log_list_id_int ].add_item( [ 'Done' ] )
 
 	# Create menus
-	l_quit_menu_choices =\
-	{
-		'choices' :
-		[
-			'No',
-			'Yes'
-		],
-		'title' : 'Really quit?'
-	}
 	l_add_menu_choices =\
 	{
 		'choices':
@@ -122,6 +116,24 @@ def main( p_stdscr ) :
 			'Go back'
 		],
 		'title' : 'Add music. What to add?'
+	}
+	l_delete_menu_choices =\
+	{
+		'choices' :
+		[
+			'No',
+			'Yes'
+		],
+		'title' : 'Really remove? Items associated with this {} will be removed.'
+	}
+	l_quit_menu_choices =\
+	{
+		'choices' :
+		[
+			'No',
+			'Yes'
+		],
+		'title' : 'Really quit?'
 	}
 
 	app_quit_flag = False
@@ -143,7 +155,11 @@ def main( p_stdscr ) :
 				if _selected_list < 0 : _selected_list = 0
 				l_lists[ _selected_list ].m_curses_win_obj.refresh()
 			case curses.KEY_ENTER | 13 | 10 :
-				l_lists[ _selected_list ].select_item_pointed()
+				if not any( x in [ curses.KEY_ENTER, 13, 10 ] for x in l_lists[ _selected_list ].m_disabled_keys ) :
+					l_lists[ _selected_list ].select_item_pointed()
+					l_selected_data = l_lists[ _selected_list ].get_selected_item()
+					if l_selected_data is not None: l_lists[ _log_list_id_int ].add_item( [ f'Activated: { l_selected_data[ 1 ] }' ] )
+
 			case curses.KEY_F3 :
 				# The search dialog
 				#p_stdscr.clear()
