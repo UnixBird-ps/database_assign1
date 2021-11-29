@@ -73,13 +73,13 @@ def main( p_stdscr ) :
 	# Init database and create tables, if new
 	init_db( db_file_name_str )
 
-	l_lists.append( ScrollList( p_stdscr, 'artists', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 3 ) - 1, 1, 0 ) )
+	l_lists.append( ScrollList( p_stdscr, 'artists', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 3 ) - 1, 1, 0, False ) )
 	l_available_screen_width -= ( l_lists[ 0 ].m_left_int + l_lists[ 0 ].m_cols_int + 2 )
-	l_lists.append( ScrollList( p_stdscr, 'albums' , True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 2 ), 1, l_lists[ 0 ].m_left_int + l_lists[ 0 ].m_cols_int + 1 ) )
+	l_lists.append( ScrollList( p_stdscr, 'albums' , True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 2 ), 1, l_lists[ 0 ].m_left_int + l_lists[ 0 ].m_cols_int + 1, False ) )
 	l_available_screen_width -= ( l_lists[ 1 ].m_cols_int + 1 )
-	l_lists.append( ScrollList( p_stdscr, 'songs'  , True, int( l_available_screen_height - 8 ), l_available_screen_width, 1, l_lists[ 1 ].m_left_int + l_lists[ 1 ].m_cols_int + 1, [ curses.KEY_ENTER, 13, 10 ] ) )
+	l_lists.append( ScrollList( p_stdscr, 'songs'  , True, int( l_available_screen_height - 8 ), l_available_screen_width, 1, l_lists[ 1 ].m_left_int + l_lists[ 1 ].m_cols_int + 1, False, [ curses.KEY_ENTER, 13, 10 ] ) )
 	l_available_screen_height -= ( l_lists[ 0 ].m_lines_int + 2 )
-	l_lists.append( ScrollList( p_stdscr, 'log'    , False, l_available_screen_height, curses.COLS - 1, l_lists[ 0 ].m_top_int + l_lists[ 0 ].m_lines_int + 1, 0, [ curses.KEY_ENTER, 13, 10 ] ) )
+	l_lists.append( ScrollList( p_stdscr, 'log'    , False, l_available_screen_height, curses.COLS - 1, l_lists[ 0 ].m_top_int + l_lists[ 0 ].m_lines_int + 1, 0, True, [ curses.KEY_ENTER, 13, 10 ] ) )
 	_log_list_id_int = len( l_lists ) - 1
 
 	l_lists[ _log_list_id_int ].add_item( [ f'curses.COLORS: { curses.COLORS }' ] )

@@ -3,14 +3,11 @@ from curses.textpad import rectangle
 
 
 class ScrollList :
-	def __init__( self, p_parent_window_obj, p_name_str, p_editable_bool, p_lines_int, p_cols_int, p_top_int, p_left_int, p_disabled_keys = None ) :
+	def __init__( self, p_parent_window_obj, p_name_str, p_editable_bool, p_lines_int, p_cols_int, p_top_int, p_left_int, p_auto_scroll_bool, p_disabled_keys = None ) :
 		if p_disabled_keys is None : p_disabled_keys = []
+
 		self.m_name_str = p_name_str
-		self.m_editable_bool = p_editable_bool
-		self.m_items_list = []
-		self.m_selected_item_int = -1
-		self.m_scroll_region_top_int = 0
-		self.m_scroll_pointer_int = 0
+
 		self.m_top_int = p_top_int
 		self.m_left_int = p_left_int
 		if p_lines_int < 3 : p_lines_int = 2
@@ -19,30 +16,54 @@ class ScrollList :
 		self.m_cols_int = p_cols_int
 		self.m_inner_lines_int = p_lines_int - 1
 		self.m_inner_cols_int = p_cols_int - 1
-		self.m_curses_win_parent_obj = None
-		self.m_curses_win_obj = None
+
+		self.m_items_list = []
+		self.m_editable_bool = p_editable_bool
+		self.m_selected_item_int = -1
+		self.m_scroll_region_top_int = 0
+		self.m_scroll_pointer_int = 0
+		self.m_auto_scroll_bool = p_auto_scroll_bool
 		self.m_disabled_keys = p_disabled_keys
 
+		self.m_curses_win_parent_obj = None
+		self.m_curses_win_obj = None
+
 		_curses_COLOR_WHITE = 8
-		_curses_COLOR_LIGHTGRAY = 9
-		_curses_COLOR_DARKGRAY = 10
-		_curses_COLOR_YELLOW = 11
+		_curses_COLOR_LIGHT_GRAY = 9
+		_curses_COLOR_DARK_GRAY = 10
+		_curses_COLOR_LIGHT_GREEN = 11
+		_curses_COLOR_DARK_GREEN = 12
+		_curses_COLOR_LIGHT_RED = 13
+		_curses_COLOR_DARK_RED = 14
+		_curses_COLOR_YELLOW = 15
 		curses.init_color( _curses_COLOR_WHITE, int(1000*255/255), int(1000*255/255), int(1000*255/255) )
-		curses.init_color( _curses_COLOR_LIGHTGRAY, int(1000*191/255), int(1000*191/255), int(1000*191/255) )
-		curses.init_color( _curses_COLOR_DARKGRAY, int(1000*127/255), int(1000*127/255), int(1000*127/255) )
+		curses.init_color( _curses_COLOR_LIGHT_GRAY, int(1000*191/255), int(1000*191/255), int(1000*191/255) )
+		curses.init_color( _curses_COLOR_DARK_GRAY, int(1000*95/255), int(1000*95/255), int(1000*95/255) )
+		curses.init_color( _curses_COLOR_LIGHT_GREEN, int(1000*0/255), int(1000*255/255), int(1000*0/255) )
+		curses.init_color( _curses_COLOR_DARK_GREEN, int(1000*0/255), int(1000*127/255), int(1000*0/255) )
+		curses.init_color( _curses_COLOR_LIGHT_RED, int(1000*255/255), int(1000*0/255), int(1000*0/255) )
+		curses.init_color( _curses_COLOR_DARK_RED, int(1000*63/255), int(1000*0/255), int(1000*0/255) )
 		curses.init_color( _curses_COLOR_YELLOW, int(1000*255/255), int(1000*255/255), int(1000*0/255) )
 		curses.init_pair( 1, _curses_COLOR_WHITE, curses.COLOR_BLACK )
-		curses.init_pair( 2, _curses_COLOR_LIGHTGRAY, curses.COLOR_BLACK )
-		curses.init_pair( 3, _curses_COLOR_DARKGRAY, curses.COLOR_BLACK )
-		curses.init_pair( 4, _curses_COLOR_YELLOW, curses.COLOR_BLACK )
-		curses.init_pair( 5, curses.COLOR_BLACK, _curses_COLOR_LIGHTGRAY )
-		curses.init_pair( 6, curses.COLOR_BLACK, _curses_COLOR_DARKGRAY )
+		curses.init_pair( 2, _curses_COLOR_LIGHT_GRAY, curses.COLOR_BLACK )
+		curses.init_pair( 3, _curses_COLOR_DARK_GRAY, curses.COLOR_BLACK )
+		curses.init_pair( 4, _curses_COLOR_LIGHT_GREEN, curses.COLOR_BLACK )
+		curses.init_pair( 5, _curses_COLOR_DARK_GREEN, curses.COLOR_BLACK )
+		curses.init_pair( 6, _curses_COLOR_LIGHT_RED, curses.COLOR_BLACK )
+		curses.init_pair( 7, _curses_COLOR_DARK_RED, curses.COLOR_BLACK )
+		curses.init_pair( 8, _curses_COLOR_YELLOW, curses.COLOR_BLACK )
+		curses.init_pair( 9, curses.COLOR_BLACK, _curses_COLOR_LIGHT_GRAY )
+		curses.init_pair( 10, curses.COLOR_BLACK, _curses_COLOR_DARK_GRAY )
 		self._WHITE_AND_BLACK = curses.color_pair( 1 )
-		self._LIGHTGRAY_AND_BLACK = curses.color_pair( 2 )
-		self._DARKGRAY_AND_BLACK = curses.color_pair( 3 )
-		self._YELLOW_AND_BLACK = curses.color_pair( 4 )
-		self._BLACK_AND_LIGHTGRAY = curses.color_pair( 5 )
-		self._BLACK_AND_DARKGRAY = curses.color_pair( 6 )
+		self._LIGHT_GRAY_AND_BLACK = curses.color_pair( 2 )
+		self._DARK_GRAY_AND_BLACK = curses.color_pair( 3 )
+		self._LIGHT_GREEN_AND_BLACK = curses.color_pair( 4 )
+		self._DARK_GREEN_AND_BLACK = curses.color_pair( 5 )
+		self._LIGHT_RED_AND_BLACK = curses.color_pair( 6 )
+		self._DARK_RED_AND_BLACK = curses.color_pair( 7 )
+		self._YELLOW_AND_BLACK = curses.color_pair( 8 )
+		self._BLACK_AND_LIGHT_GRAY = curses.color_pair( 9 )
+		self._BLACK_AND_DARK_GRAY = curses.color_pair( 10 )
 
 		self.create_window( p_parent_window_obj )
 		#self.m_curses_win_obj.scrollok( True )
@@ -51,6 +72,9 @@ class ScrollList :
 
 	def add_item( self, p_new_item_obj ) :
 		self.m_items_list.append( p_new_item_obj )
+		if self.m_auto_scroll_bool :
+			self.m_scroll_pointer_int = len( self.m_items_list ) - 1
+			self.scroll_rel( 1 )
 
 
 	def create_window( self, p_parent ) :
@@ -78,7 +102,7 @@ class ScrollList :
 		#self.m_curses_win_obj.border()
 
 		if p_has_focus_bool : self.m_curses_win_parent_obj.attron( self._WHITE_AND_BLACK )
-		else : self.m_curses_win_parent_obj.attron( self._DARKGRAY_AND_BLACK )
+		else : self.m_curses_win_parent_obj.attron( self._DARK_GRAY_AND_BLACK )
 		rectangle(
 			self.m_curses_win_parent_obj,
 			self.m_top_int,
@@ -87,10 +111,13 @@ class ScrollList :
 			self.m_left_int + self.m_cols_int
 		)
 		if p_has_focus_bool : self.m_curses_win_parent_obj.attroff( self._WHITE_AND_BLACK )
-		else : self.m_curses_win_parent_obj.attroff( self._DARKGRAY_AND_BLACK )
+		else : self.m_curses_win_parent_obj.attroff( self._DARK_GRAY_AND_BLACK )
 
 		# Put the name of the list on the border above the list
-		self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 2, self.m_name_str.title(), self.m_inner_cols_int )
+		if p_has_focus_bool :
+			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 2, self.m_name_str.title(), self.m_inner_cols_int )
+		else :
+			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 2, self.m_name_str.title(), self.m_inner_cols_int, self._DARK_GRAY_AND_BLACK )
 
 		if len( self.m_items_list ) > 0 :
 			# find every col's width
@@ -137,11 +164,15 @@ class ScrollList :
 
 			# Draw selection differently
 			if list_idx == self.m_scroll_pointer_int and p_has_focus_bool :
-				self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, curses.A_REVERSE )
-			elif list_idx == self.m_selected_item_int :
-				self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, self._BLACK_AND_DARKGRAY )
+				self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
 			else :
 				self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int )
+
+			if list_idx == self.m_selected_item_int :
+				if p_has_focus_bool :
+					self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, curses.A_REVERSE )
+				else :
+					self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
 
 		#self.m_curses_win_parent_obj.addstr( self.m_top_int - 1, self.m_left_int + 1, str( self.m_scroll_pointer_int ) )
 
