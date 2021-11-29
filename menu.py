@@ -1,4 +1,5 @@
 import curses
+from curses.textpad import rectangle
 
 
 def get_menu_choice( p_stdscr, p_choice_strs_list ) :
@@ -15,8 +16,14 @@ def get_menu_choice( p_stdscr, p_choice_strs_list ) :
 	# Calculate half menu width and height
 	l_menu_half_yx = ( int( len( p_choice_strs_list ) / 2 ), int( l_widest_int / 2 ) )
 
-	# Write the title
 	l_yx = ( l_center_yx[ 0 ] - l_menu_half_yx[ 0 ] - 2, l_center_yx[ 1 ] - l_menu_half_yx[ 1 ] )
+
+	l_ulyx = ( max( 1, l_yx[ 0 ] - 1 ), max( 1, l_yx[ 1 ] - 1 ) )
+	l_lryx = ( min( p_stdscr.getmaxyx()[ 0 ], l_yx[ 0 ] + 2 + len( p_choice_strs_list[ 'choices' ] ) ), min( p_stdscr.getmaxyx()[ 1 ], l_yx[ 1 ] + 2 + l_widest_int ) )
+
+	rectangle( p_stdscr, l_ulyx[ 0 ], l_ulyx[ 1 ], l_lryx[ 0 ], l_lryx[ 1 ] )
+
+	# Write the title
 	p_stdscr.addstr( l_yx[ 0 ], l_yx[ 1 ], p_choice_strs_list[ 'title' ].center( l_widest_int + 2 ) )
 
 	# Stay in menu loop until user hits ENTER key

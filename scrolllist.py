@@ -70,16 +70,104 @@ class ScrollList :
 		#self.m_curses_win_obj.idlok( 1 )
 
 
-	def add_item( self, p_new_item_obj ) :
-		self.m_items_list.append( p_new_item_obj )
-		if self.m_auto_scroll_bool :
-			self.m_scroll_pointer_int = len( self.m_items_list ) - 1
-			self.scroll_rel( 1 )
-
-
 	def create_window( self, p_parent ) :
 		self.m_curses_win_parent_obj = p_parent
 		self.m_curses_win_obj = p_parent.subwin( self.m_inner_lines_int + 1, self.m_inner_cols_int + 1, self.m_top_int + 1, self.m_left_int + 1 )
+
+
+	def redraw_list( self, p_has_focus_bool, p_shown_cols = None ) :
+		if p_shown_cols is None : p_shown_cols = []
+
+		#self.m_curses_win_obj.border()
+
+		if p_has_focus_bool : self.m_curses_win_parent_obj.attron( self._LIGHT_GREEN_AND_BLACK )
+		else : self.m_curses_win_parent_obj.attron( self._DARK_GRAY_AND_BLACK )
+		rectangle(
+			self.m_curses_win_parent_obj,
+			self.m_top_int,
+			self.m_left_int,
+			self.m_top_int + self.m_lines_int,
+			self.m_left_int + self.m_cols_int
+		)
+		if p_has_focus_bool : self.m_curses_win_parent_obj.attroff( self._LIGHT_GREEN_AND_BLACK )
+		else : self.m_curses_win_parent_obj.attroff( self._DARK_GRAY_AND_BLACK )
+
+		# Put the name of the list on the border above the list
+		if p_has_focus_bool :
+			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 2, self.m_name_str.title(), self.m_inner_cols_int )
+		else :
+			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 2, self.m_name_str.title(), self.m_inner_cols_int, self._DARK_GRAY_AND_BLACK )
+
+		if len( self.m_items_list ) > 0 :
+			# Get common width for every column
+			l_col_width_list = []
+			for b_n in range( len( self.m_items_list[ 0 ] ) ) :
+				l_col_width_list.append( 0 )
+			for i_row_idx, i_row in enumerate( self.m_items_list ):
+				for i_col_idx, col in enumerate( i_row ) :
+					l_width_int = len( str( col ) )
+					if l_width_int > l_col_width_list[ i_col_idx ] :
+						l_col_width_list[ i_col_idx ] = l_width_int
+
+			for idx in range( self.m_inner_lines_int ) :
+				# Calculate list index
+				list_idx = self.m_scroll_region_top_int + idx
+				# Make sure selected index is within bounds
+				if list_idx < 0 : break
+				if list_idx >= len( self.m_items_list ) : break
+
+				# Get row elements
+				itm = ''
+				#for field_idx, field in enumerate( self.m_items_list[ list_idx ] ) :
+				if len( p_shown_cols ) == 1 :
+					# Show exactly one field from the field id list
+					itm += f'{ self.m_items_list[ list_idx ][ p_shown_cols[ 0 ] ] }'
+				elif len( p_shown_cols ) > 1 :
+					l_width_available = self.m_inner_cols_int - 2 - l_col_width_list[ p_shown_cols[ -1 ] ]
+					for shown_idx_key, shown_idx_value in enumerate( p_shown_cols ) :
+						# Store the value
+						l_value = self.m_items_list[ list_idx ][ shown_idx_value ]
+						if shown_idx_key != len( p_shown_cols ) - 1 :
+							# What columns in list to show
+							itm += f'{ l_value }'[ :l_width_available ].ljust( l_width_available )
+						else :
+							# What columns in list to show
+							itm += f'{ l_value }'[ :l_col_width_list[ p_shown_cols[ -1 ] ] ].rjust( l_col_width_list[ p_shown_cols[ -1 ] ] )
+
+				# Add padding
+				itm = itm[ : self.m_inner_cols_int - 2 ].ljust( self.m_inner_cols_int - 2 )
+				itm = ' ' + itm + ' '
+
+				# Draw selection differently
+				if list_idx == self.m_scroll_pointer_int and p_has_focus_bool :
+					self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
+				else :
+					self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int )
+
+				if list_idx == self.m_selected_item_int :
+					if p_has_focus_bool :
+						self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, curses.A_REVERSE )
+					else :
+						self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
+		else :
+			# The list is empty
+			self.m_curses_win_obj.addnstr( 0 , 1, 'Empty', self.m_inner_cols_int, self._DARK_GRAY_AND_BLACK )
+
+		#self.m_curses_win_parent_obj.addstr( self.m_top_int - 1, self.m_left_int + 1, str( self.m_scroll_pointer_int ) )
+		self.m_curses_win_obj.refresh()
+
+
+	def select_item_pointed( self ) :
+		if len( self.m_items_list ) > 0 and self.m_scroll_pointer_int != self.m_selected_item_int :
+			self.m_selected_item_int = self.m_scroll_pointer_int
+			return True
+		else : return False
+
+
+	def get_selected_item( self ) :
+		if len( self.m_items_list ) > 0 :
+			return self.m_items_list[ self.m_selected_item_int ]
+		else : return None
 
 
 	def scroll_rel( self, p_rel_pos_int  ) :
@@ -96,97 +184,15 @@ class ScrollList :
 			if self.m_scroll_region_top_int < 0 : self.m_scroll_region_top_int = 0
 
 
-	def redraw_list( self, p_has_focus_bool, p_shown_cols = None ) :
-		if p_shown_cols is None : p_shown_cols = []
-
-		#self.m_curses_win_obj.border()
-
-		if p_has_focus_bool : self.m_curses_win_parent_obj.attron( self._WHITE_AND_BLACK )
-		else : self.m_curses_win_parent_obj.attron( self._DARK_GRAY_AND_BLACK )
-		rectangle(
-			self.m_curses_win_parent_obj,
-			self.m_top_int,
-			self.m_left_int,
-			self.m_top_int + self.m_lines_int,
-			self.m_left_int + self.m_cols_int
-		)
-		if p_has_focus_bool : self.m_curses_win_parent_obj.attroff( self._WHITE_AND_BLACK )
-		else : self.m_curses_win_parent_obj.attroff( self._DARK_GRAY_AND_BLACK )
-
-		# Put the name of the list on the border above the list
-		if p_has_focus_bool :
-			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 2, self.m_name_str.title(), self.m_inner_cols_int )
-		else :
-			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 2, self.m_name_str.title(), self.m_inner_cols_int, self._DARK_GRAY_AND_BLACK )
-
-		if len( self.m_items_list ) > 0 :
-			# find every col's width
-			l_col_width_list = []
-			for b_n in range( len( self.m_items_list[ 0 ] ) ): l_col_width_list.append( 0 )
-
-			for i_row_idx, i_row in enumerate( self.m_items_list ):
-				for i_col_idx, col in enumerate( i_row ) :
-					l_width_int = len( str( col ) )
-					if l_width_int > l_col_width_list[ i_col_idx ] :
-						l_col_width_list[ i_col_idx ] = l_width_int
-
-		for idx in range( self.m_inner_lines_int ) :
-			# Calculate list index
-			list_idx = self.m_scroll_region_top_int + idx
-			# Make sure selected index is within boundery
-			if list_idx < 0 : break
-			if list_idx >= len( self.m_items_list ) : break
-
-			# Get row elements
-			itm = ''
-			#for field_idx, field in enumerate( self.m_items_list[ list_idx ] ) :
-			if len( p_shown_cols ) > 0 :
-				for shown_idx_key, shown_idx_value in enumerate( p_shown_cols ) :
-					l_value = self.m_items_list[ list_idx ][ shown_idx_value ]
-					# Add space after first and following fields
-					if shown_idx_key > 0 : itm += ' '
-					# What columns in list to show
-					itm += f'{ l_value }'
-			else :
-				# All if not specified
-				for item_idx, item_value in self.m_items_list[ list_idx ] :
-					if item_idx > 0 : itm += ' '
-					itm += f'{ item_idx } { item_value }'
-
-			# Add padding
-			itm = itm[ : self.m_inner_cols_int - 2 ].ljust( self.m_inner_cols_int - 2 )
-
-			# Mark selected item
-			if list_idx == self.m_selected_item_int :
-				itm = '>' + itm + '<'
-			else :
-				itm = ' ' + itm + ' '
-
-			# Draw selection differently
-			if list_idx == self.m_scroll_pointer_int and p_has_focus_bool :
-				self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
-			else :
-				self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int )
-
-			if list_idx == self.m_selected_item_int :
-				if p_has_focus_bool :
-					self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, curses.A_REVERSE )
-				else :
-					self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
-
-		#self.m_curses_win_parent_obj.addstr( self.m_top_int - 1, self.m_left_int + 1, str( self.m_scroll_pointer_int ) )
-
-		self.m_curses_win_obj.refresh()
+	def add_item( self, p_new_item_obj ) :
+		self.m_items_list.append( p_new_item_obj )
+		if self.m_auto_scroll_bool :
+			self.m_scroll_pointer_int = len( self.m_items_list ) - 1
+			self.scroll_rel( 1 )
 
 
-	def select_item_pointed( self ) :
-		if len( self.m_items_list ) > 0 :
-			self.m_selected_item_int = self.m_scroll_pointer_int
-			return True
-		else : return False
-
-
-	def get_selected_item( self ) :
-		if len( self.m_items_list ) > 0 :
-			return self.m_items_list[ self.m_selected_item_int ]
-		else : return None
+	def empty_list( self ) :
+		self.m_items_list = []
+		self.m_selected_item_int = -1
+		self.m_scroll_region_top_int = 0
+		self.m_scroll_pointer_int = 0
