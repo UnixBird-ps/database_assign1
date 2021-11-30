@@ -94,9 +94,9 @@ class ScrollList :
 
 		# Put the name of the list on the border above the list
 		if p_has_focus_bool :
-			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 2, self.m_name_str.title(), self.m_inner_cols_int )
+			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 1, f' { self.m_name_str.title() } ', self.m_inner_cols_int - 3 )
 		else :
-			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 2, self.m_name_str.title(), self.m_inner_cols_int, self._DARK_GRAY_AND_BLACK )
+			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 1, f' { self.m_name_str.title() } ', self.m_inner_cols_int -3 , self._DARK_GRAY_AND_BLACK )
 
 		if len( self.m_items_list ) > 0 :
 			# Get common width for every column
