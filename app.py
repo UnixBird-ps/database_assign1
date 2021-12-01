@@ -127,7 +127,7 @@ def _features_dialog( p_stdscr ) :
 				# Get album with longest play length
 				l_sql_query =\
 				'''
-					--Find the album with longest total length.
+				-- Album with longest playing time.
 				SELECT
 					albums.id,
 					albums.title,
@@ -135,7 +135,7 @@ def _features_dialog( p_stdscr ) :
 					CAST( sum( songs.duration ) / 60 AS STRING ) || ':' || PRINTF( '%02d', sum( songs.duration ) % 60 ) AS total_length
 				FROM albums, songs
 				WHERE albums.id = songs.album_id
-				GROUP BYsongs.album_id
+				GROUP BY songs.album_id
 				ORDER BY total_length desc
 				LIMIT 1
 				'''
@@ -148,7 +148,7 @@ def _features_dialog( p_stdscr ) :
 						[
 							'Go back'
 						],
-						'title' : f'Album with longest play time: "{ l_query_result[ 2 ][ 0 ][ 1 ] }" ({ l_query_result[ 2 ][ 0 ][ 2 ] }) length: { l_query_result[ 2 ][ 0 ][ 3 ] }'
+						'title' : f'Album with longest playing time: "{ l_query_result[ 2 ][ 0 ][ 1 ] }" ({ l_query_result[ 2 ][ 0 ][ 2 ] }) length: { l_query_result[ 2 ][ 0 ][ 3 ] }'
 					}
 					get_menu_choice( p_stdscr, l_msg_box_choices )
 
@@ -249,12 +249,10 @@ def main( p_stdscr ) :
 		_redraw_main_screen( p_stdscr, _l_lists )
 		#p_stdscr.refresh()
 		l_input_key = p_stdscr.getch()
-		p_stdscr.addstr( 0, 0, str( l_input_key ) )
+		#p_stdscr.addstr( 0, 0, str( l_input_key ) )
 		# Log key code
 		#l_lists[ _log_list_id_int ].add_item( [ str( l_input_key ) ] )
 		match l_input_key :
-			case curses.KEY_F1 :
-				_features_dialog( p_stdscr )
 			case 9 :   # Missing curses.KEY_TAB
 				_selected_list += 1
 				if _selected_list >= len( _l_lists ) : _selected_list = 0
@@ -264,7 +262,7 @@ def main( p_stdscr ) :
 				if _selected_list < 0 : _selected_list = len( _l_lists ) - 1
 				if _selected_list < 0 : _selected_list = 0
 				_l_lists[ _selected_list ].m_curses_win_obj.refresh()
-			case curses.KEY_ENTER | 13 | 10 :
+			case curses.KEY_ENTER | 459 | 13 | 10 :
 				if not any( x in [ curses.KEY_ENTER, 13, 10 ] for x in _l_lists[ _selected_list ].m_disabled_keys ) and _l_lists[ _selected_list ].select_item_pointed() :
 					l_selected_data = _l_lists[ _selected_list ].get_selected_item()
 					if l_selected_data is not None :
@@ -309,11 +307,14 @@ def main( p_stdscr ) :
 								l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'album_id' : f'{ l_selected_data[ 0 ] }' } )
 								_l_lists[ 2 ].empty_list()
 								for row_idx, row in enumerate( l_query_result[ 2 ] ) : _l_lists[ 2 ].add_item( row )
+			case curses.KEY_F1 :
+				_features_dialog( p_stdscr )
 			case curses.KEY_F3 :
 				# The search dialog
 				#p_stdscr.clear()
 				#_redraw_main_bars( p_stdscr )
-				l_user_input_str = get_string_from_input( p_stdscr, 'Enter search term' )
+				l_user_input_str = get_string_from_input( p_stdscr, 'Search:', 30 )
+				print( f'l_user_input_str: { l_user_input_str }' )
 				#p_stdscr.addstr( 0, 0, l_user_input_str )
 				#p_stdscr.refresh()
 			case curses.KEY_F8 :
@@ -332,10 +333,7 @@ def main( p_stdscr ) :
 				l_quit_menu_choice = get_menu_choice( p_stdscr, l_quit_menu_choices )
 				#p_stdscr.clear()
 				#_redraw_main_screen( p_stdscr, l_lists )
-				match l_quit_menu_choice :
-					case 0:
-						pass
-					case 1 : app_quit_flag = True
+				if l_quit_menu_choice == 1 : app_quit_flag = True
 			case curses.KEY_UP   : _l_lists[ _selected_list ].scroll_rel( -1 )
 			case curses.KEY_DOWN : _l_lists[ _selected_list ].scroll_rel( 1 )
 
