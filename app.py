@@ -80,9 +80,9 @@ def _features_dialog( p_stdscr ) :
 	{
 		'choices' :
 		[
-			'Find the oldest album',
-			'Find the album with the longest playing time',
-			'Go to main screen'
+			[ 'Find the oldest album' ],
+			[ 'Find the album with the longest playing time' ],
+			[ 'Go to main screen' ]
 		],
 		'title' : 'What to show?'
 	}
@@ -118,7 +118,7 @@ def _features_dialog( p_stdscr ) :
 					{
 						'choices' :
 						[
-							'Go back'
+							[ 'Go back' ]
 						],
 						'title' : f'Oldest album: "{ l_query_result[ 2 ][ 0 ][ 1 ] }" released in { l_query_result[ 2 ][ 0 ][ 3 ] }'
 					}
@@ -146,7 +146,7 @@ def _features_dialog( p_stdscr ) :
 					{
 						'choices' :
 						[
-							'Go back'
+							[ 'Go back' ]
 						],
 						'title' : f'Album with longest playing time: "{ l_query_result[ 2 ][ 0 ][ 1 ] }" ({ l_query_result[ 2 ][ 0 ][ 2 ] }) length: { l_query_result[ 2 ][ 0 ][ 3 ] }'
 					}
@@ -154,6 +154,74 @@ def _features_dialog( p_stdscr ) :
 
 	# Return to caller
 	return l_features_menu_choice
+
+
+def _search_dialog( p_stdscr ) :
+	# Get search string from user
+	l_user_input_str = get_string_from_input( p_stdscr, 'Search:', 32 )
+	# Init empty list
+	l_menu_list_items = []
+	# Search in artists
+	l_sql_query =\
+	'''
+		SELECT artists.id, artists.name
+		FROM artists
+		WHERE artists.name LIKE :search_string;
+	'''
+	l_query_result = []
+	l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
+	# Add to list
+	if len( l_query_result[ 2 ] ) > 0 :
+		for row in l_query_result[ 2 ] :
+			row_2 = [ itm for itm in row ]
+			row_2.append( 'artists' )
+			l_menu_list_items.append( row_2 )
+	# Search in albums
+	l_sql_query =\
+	'''
+		SELECT albums.id, albums.title
+		FROM albums
+		WHERE albums.title LIKE :search_string;
+	'''
+	l_query_result = []
+	l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
+	# Add to menu
+	if len( l_query_result[ 2 ] ) > 0 :
+		for row in l_query_result[ 2 ] :
+			row_2 = [ itm for itm in row ]
+			row_2.append( 'albums' )
+			l_menu_list_items.append( row_2 )
+	# Search in songs
+	l_sql_query =\
+	'''
+		SELECT songs.id, songs.name
+		FROM songs
+		WHERE songs.name LIKE :search_string;
+	'''
+	l_query_result = []
+	l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
+	# Add to menu
+	if len( l_query_result[ 2 ] ) > 0 :
+		for row in l_query_result[ 2 ] :
+			row_2 = [ itm for itm in row ]
+			row_2.append( 'songs' )
+			l_menu_list_items.append( row_2 )
+	# Create a menu with empty list
+	l_search_result_choices =\
+	{
+		'choices' :
+		[
+			[ 'Go back' ]
+		],
+		'title' : 'Search results'
+	}
+	# Specified which fields to show in search results
+	for row in l_menu_list_items :
+		l_search_result_choices[ 'choices' ].insert( 0, [ row[ 2 ], row[ 1 ] ] )
+	# Wait for user to respond
+	l_search_results_menu_choice = get_menu_choice( p_stdscr, l_search_result_choices )
+	if 0 <= l_search_results_menu_choice < max( 0, len( l_search_result_choices[ 'choices' ] ) - 1 ) :
+		print( [ itm for itm in l_menu_list_items[ l_search_results_menu_choice ] ] )
 
 
 def main( p_stdscr ) :
@@ -170,24 +238,22 @@ def main( p_stdscr ) :
 	l_available_screen_width = l_scr_size_yx[ 1 ]
 	l_available_screen_height = l_scr_size_yx[ 0 ] - 1 - 1
 
-	#for item in l_lists : print( item )
 	# Init database and create tables, if new
 	init_db( _db_file_name_str )
 
-	# Define 4 lists for UI: #1 artists, #2 albums, #3 songs, #4 log
+	# Define 4 list boxes for UI
+	# Artists list
 	_l_lists.append( ScrollList( p_stdscr, 'artists', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 3 ) - 1, 1, 0, False ) )
-
+	# Albums list
 	l_available_screen_width = l_scr_size_yx[ 1 ] - _l_lists[ 0 ].m_left_int - _l_lists[ 0 ].m_cols_int - 2
 	_l_lists.append( ScrollList( p_stdscr, 'albums', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 2 ), 1, _l_lists[ 0 ].m_left_int + _l_lists[ 0 ].m_cols_int + 1, False ) )
-
+	# Songs list
 	l_available_screen_width = l_scr_size_yx[ 1 ] - _l_lists[ 1 ].m_left_int - _l_lists[ 1 ].m_cols_int - 2
 	_l_lists.append( ScrollList( p_stdscr, 'songs', True, int( l_available_screen_height - 8 ), l_available_screen_width, 1, _l_lists[ 1 ].m_left_int + _l_lists[ 1 ].m_cols_int + 1, False, [ curses.KEY_ENTER, 13, 10 ] ) )
-
+	# Logs list
 	l_available_screen_height -= (_l_lists[ 0 ].m_lines_int + 2 )
-	#_l_lists.append( ScrollList( p_stdscr, 'log', False, l_available_screen_height, _l_lists[ 1 ].m_cols_int + _l_lists[ 2 ].m_cols_int, _l_lists[ 0 ].m_top_int + _l_lists[ 0 ].m_lines_int + 1, _l_lists[ 0 ].m_left_int + _l_lists[ 0 ].m_cols_int + 1, True, [ curses.KEY_ENTER, 13, 10 ] ) )
 	l_available_screen_width = l_scr_size_yx[ 1 ] - _l_lists[ 0 ].m_left_int - _l_lists[ 0 ].m_cols_int - 2
 	_l_lists.append( ScrollList( p_stdscr, 'log', False, l_available_screen_height, l_available_screen_width, _l_lists[ 0 ].m_top_int + _l_lists[ 0 ].m_lines_int + 1, _l_lists[ 0 ].m_left_int + _l_lists[ 0 ].m_cols_int + 1, True, [ curses.KEY_ENTER, 13, 10 ] ) )
-	#_log_list_id_int = 3
 
 	_l_lists[ _log_list_id_int ].add_item( [ f'Welcome to { _app_title } { _app_version }.' ] )
 
@@ -197,46 +263,23 @@ def main( p_stdscr ) :
 		l_query_result = sqlite_get( _db_file_name_str, 'SELECT * FROM artists' )
 		for row_idx, row in enumerate( l_query_result[ 2 ] ) :
 			_l_lists[ 0 ].add_item( row )
-	# l_lists[ _log_list_id_int ].add_item( [ "Populating 'Albums' list..." ] )
-	# if len( l_lists ) > 1 :
-	# 	l_query_result = sqlite_get( db_file_name_str, 'SELECT * FROM albums' )
-	# 	for row_idx, row in enumerate( l_query_result[ 2 ] ) :
-	# 		l_lists[ 1 ].add_item( row )
-	# l_lists[ _log_list_id_int ].add_item( [ 'Done' ] )
-	# l_lists[ _log_list_id_int ].add_item( [ "Populating 'Songs' list..." ] )
-	# if len( l_lists ) > 2 :
-	# 	l_query_result = sqlite_get( db_file_name_str, 'SELECT * FROM songs' )
-	# 	for row_idx, row in enumerate( l_query_result[ 2 ] ) :
-	# 		l_lists[ 2 ].add_item( row )
-	# l_lists[ _log_list_id_int ].add_item( [ 'Done' ] )
 
 	# Create menus
-	l_add_menu_choices =\
-	{
-		'choices':
-		[
-			'Add artist ...',
-			'Add album  ...',
-			'Add song   ...',
-			'Go back'
-		],
-		'title' : 'Add music. What to add?'
-	}
 	l_delete_menu_choices =\
 	{
 		'choices' :
 		[
-			'No',
-			'Yes'
+			[ 'No' ],
+			[ 'Yes' ]
 		],
-		'title' : 'Really remove? Items associated with this {} will be removed.'
+		'title' : 'Really remove? Items in the lists to the right of associated with this {} will be removed.'
 	}
 	l_quit_menu_choices =\
 	{
 		'choices' :
 		[
-			'No',
-			'Yes'
+			[ 'No' ],
+			[ 'Yes' ]
 		],
 		'title' : 'Really quit?'
 	}
@@ -247,11 +290,8 @@ def main( p_stdscr ) :
 		global _artist_num_songs
 		p_stdscr.clear()
 		_redraw_main_screen( p_stdscr, _l_lists )
-		#p_stdscr.refresh()
 		l_input_key = p_stdscr.getch()
-		#p_stdscr.addstr( 0, 0, str( l_input_key ) )
-		# Log key code
-		#l_lists[ _log_list_id_int ].add_item( [ str( l_input_key ) ] )
+		# Act on the key
 		match l_input_key :
 			case 9 :   # Missing curses.KEY_TAB
 				_selected_list += 1
@@ -271,13 +311,13 @@ def main( p_stdscr ) :
 								_l_lists[ _log_list_id_int ].add_item( [ f'Activated artist: { l_selected_data[ 1 ] }' ] )
 								# Get artist's total number of songs.
 								l_sql_query =\
-								"""
+								'''
 								SELECT COUNT( DISTINCT songs.id ) AS artist_songs
 								FROM songs
 								JOIN albums
 								ON songs.album_id = albums.id
 								AND albums.artist_id = :artist_id;
-								"""
+								'''
 								l_query_result = None
 								l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'artist_id' : f'{ l_selected_data[ 0 ] }' } )
 								if not l_query_result is None :
@@ -285,11 +325,11 @@ def main( p_stdscr ) :
 
 								_l_lists[ _log_list_id_int ].add_item( [ "Populating 'Albums' list." ] )
 								l_sql_query =\
-								"""
+								'''
 								SELECT albums.*
 								FROM albums
 								WHERE albums.artist_id = :artist_id;
-								"""
+								'''
 								l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'artist_id' : f'{ l_selected_data[ 0 ] }' } )
 								_l_lists[ 1 ].empty_list()
 								_l_lists[ 2 ].empty_list()
@@ -311,18 +351,10 @@ def main( p_stdscr ) :
 				_features_dialog( p_stdscr )
 			case curses.KEY_F3 :
 				# The search dialog
-				#p_stdscr.clear()
-				#_redraw_main_bars( p_stdscr )
-				l_user_input_str = get_string_from_input( p_stdscr, 'Search:', 30 )
-				print( f'l_user_input_str: { l_user_input_str }' )
-				#p_stdscr.addstr( 0, 0, l_user_input_str )
-				#p_stdscr.refresh()
+				_search_dialog( p_stdscr )
 			case curses.KEY_F8 :
 				# The Add menu
-				# p_stdscr.clear()
-				#_redraw_main_bars( p_stdscr )
-				l_add_menu_choice = get_menu_choice( p_stdscr, l_add_menu_choices )
-				#p_stdscr.clear()
+				pass
 			case curses.CTL_DEL :
 				# The Remove menu
 				pass
