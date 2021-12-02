@@ -12,6 +12,7 @@ _l_lists = []
 _selected_list = 0
 _log_list_id_int = 3
 _artist_num_songs = 0
+_artist_num_albums = 0
 
 def _redraw_title_bar( p_stdscr, p_app_title ) :
 	# Get the size of the screen
@@ -44,7 +45,8 @@ def _redraw_main_bars( p_stdscr ) :
 	_redraw_status_bar( p_stdscr, ' F1:Features   ↑/↓:Scroll   ENTER:Activate   TAB:Switch List   F3:Search   F4:Edit   F7:Add   F8:Remove   F10:Quit ' )
 
 
-def _redraw_main_screen( p_stdscr, p_lists = [] ) :
+def _redraw_main_screen( p_stdscr, p_lists = None ) :
+	if p_lists is None : p_lists = []
 	_redraw_main_bars( p_stdscr )
 	# try :
 	for item_idx, item in enumerate( p_lists ) :
@@ -69,9 +71,59 @@ def _redraw_main_screen( p_stdscr, p_lists = [] ) :
 		p_stdscr.addnstr( _l_lists[ _log_list_id_int ].m_top_int + 2, 2, f' albums(total): { l_query_result[ 2 ][ 0 ][ 1 ] }', _l_lists[ 0 ].m_cols_int - 2 )
 		p_stdscr.addnstr( _l_lists[ _log_list_id_int ].m_top_int + 3, 2, f'  songs(total): { l_query_result[ 2 ][ 0 ][ 2 ] }', _l_lists[ 0 ].m_cols_int - 2 )
 		p_stdscr.addnstr( _l_lists[ _log_list_id_int ].m_top_int + 4, 2, f' songs(artist): { _artist_num_songs }', _l_lists[ 0 ].m_cols_int - 2 )
-
+		p_stdscr.addnstr( _l_lists[ _log_list_id_int ].m_top_int + 5, 2, f'albums(artist): { _artist_num_albums }', _l_lists[ 0 ].m_cols_int - 2 )
 	# except :
 	# 	pass
+
+
+def _reload_tables() :
+	# Start with empty lists
+	_l_lists[ 0 ].empty_list()
+	_l_lists[ 1 ].empty_list()
+	_l_lists[ 2 ].empty_list()
+	l_query_result = None
+	l_query_result = sqlite_get( _db_file_name_str, f'SELECT * FROM artists;' )
+	for row_idx, table_row in enumerate( l_query_result[ 2 ] ) :
+		_l_lists[ 0 ].add_item( table_row )
+	l_query_result = None
+
+
+def _activate_item_with_id_from_table( p_selection_dict ) :
+	global _selected_list
+	# match p_table_name :
+	# 	case 'artists' :
+	# 		# Switch list
+	# 		_selected_list = 0
+	# 		_reload_tables()
+	# 		_l_lists[ 0 ].select_item_on_key( p_selection_dict[ 'id' ], p_selection_dict[ 'table_name' ] )
+	# 		l_selected_data = _l_lists[ 0 ].get_selected_item()
+	# 		l_sql_query =\
+	# 		'''
+	# 		SELECT *
+	# 		FROM albums
+	# 		WHERE albums.artist_id = :artist_id;
+	# 		'''
+	# 		l_query_result = None
+	# 		l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'artist_id' : f'{ l_selected_data[ 0 ] }' } )
+	# 		for row_idx, table_row in enumerate( l_query_result[ 2 ] ) :
+	# 			_l_lists[ 1 ].add_item( table_row )
+	# 	case 'albums' :
+	# 		# Load artist and album, activate both, switch list to albums, select this album
+	# 		# Switch list
+	# 		_selected_list = 1
+	# 		# Reload tables albums and songs
+	# 		_l_lists[ 1 ].empty_list()
+	# 		_l_lists[ 2 ].empty_list()
+	# 		l_query_result = None
+	# 		l_query_result = sqlite_get( _db_file_name_str, 'SELECT * FROM albums' )
+	# 		for row_idx, table_row in enumerate( l_query_result[ 2 ] ) :
+	# 			_l_lists[ 1 ].add_item( table_row )
+	# 			if p_table_row_id == table_row[ 0 ] : _l_lists[ 1 ].select_item( row_idx )
+	# 		l_selected_data = _l_lists[ 1 ].get_selected_item()
+	#
+	# 	case 'songs' :
+	# 		# Load artist and album for this song, activate both, switch list to songs, select this song
+	# 		_selected_list = 2
 
 
 def _features_dialog( p_stdscr ) :
@@ -104,8 +156,6 @@ def _features_dialog( p_stdscr ) :
 					SELECT *, MIN( year_released )
 					FROM albums
 				'''
-				l_query_result = None
-				l_query_result = sqlite_get( _db_file_name_str, l_sql_query )
 				'''
 				-- Alternative - Returns more then one with same year
 				select albums.*, artists.name as artist
@@ -113,6 +163,8 @@ def _features_dialog( p_stdscr ) :
 				where year_released = ( select min( year_released ) as year_released from albums )
 				and artists.id = albums.artist_id
 				'''
+				l_query_result = None
+				l_query_result = sqlite_get( _db_file_name_str, l_sql_query )
 				if not l_query_result is None :
 					l_msg_box_choices =\
 					{
@@ -168,7 +220,7 @@ def _search_dialog( p_stdscr ) :
 		FROM artists
 		WHERE artists.name LIKE :search_string;
 	'''
-	l_query_result = []
+	l_query_result = None
 	l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
 	# Add to list
 	if len( l_query_result[ 2 ] ) > 0 :
@@ -183,7 +235,7 @@ def _search_dialog( p_stdscr ) :
 		FROM albums
 		WHERE albums.title LIKE :search_string;
 	'''
-	l_query_result = []
+	l_query_result = None
 	l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
 	# Add to menu
 	if len( l_query_result[ 2 ] ) > 0 :
@@ -198,7 +250,7 @@ def _search_dialog( p_stdscr ) :
 		FROM songs
 		WHERE songs.name LIKE :search_string;
 	'''
-	l_query_result = []
+	l_query_result = None
 	l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
 	# Add to menu
 	if len( l_query_result[ 2 ] ) > 0 :
@@ -217,11 +269,12 @@ def _search_dialog( p_stdscr ) :
 	}
 	# Specified which fields to show in search results
 	for row in l_menu_list_items :
-		l_search_result_choices[ 'choices' ].insert( 0, [ row[ 2 ], row[ 1 ] ] )
+		# Add table
+		l_search_result_choices[ 'choices' ].insert( max( 0, len( l_search_result_choices[ 'choices' ] ) - 1 ), [ row[ 2 ], row[ 1 ] ] )
 	# Wait for user to respond
 	l_search_results_menu_choice = get_menu_choice( p_stdscr, l_search_result_choices )
 	if 0 <= l_search_results_menu_choice < max( 0, len( l_search_result_choices[ 'choices' ] ) - 1 ) :
-		print( [ itm for itm in l_menu_list_items[ l_search_results_menu_choice ] ] )
+		return l_menu_list_items[ l_search_results_menu_choice ]
 
 
 def main( p_stdscr ) :
@@ -260,6 +313,7 @@ def main( p_stdscr ) :
 	# Populate UI lists with data from database
 	_l_lists[ _log_list_id_int ].add_item( [ "Populating 'Artists' list." ] )
 	if len( _l_lists ) > 0 :
+		l_query_result = None
 		l_query_result = sqlite_get( _db_file_name_str, 'SELECT * FROM artists' )
 		for row_idx, row in enumerate( l_query_result[ 2 ] ) :
 			_l_lists[ 0 ].add_item( row )
@@ -288,6 +342,7 @@ def main( p_stdscr ) :
 	while not app_quit_flag :
 		global _selected_list
 		global _artist_num_songs
+		global _artist_num_albums
 		p_stdscr.clear()
 		_redraw_main_screen( p_stdscr, _l_lists )
 		l_input_key = p_stdscr.getch()
@@ -330,11 +385,12 @@ def main( p_stdscr ) :
 								FROM albums
 								WHERE albums.artist_id = :artist_id;
 								'''
+								l_query_result = None
 								l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'artist_id' : f'{ l_selected_data[ 0 ] }' } )
+								_artist_num_albums = len( l_query_result[ 2 ] )
 								_l_lists[ 1 ].empty_list()
 								_l_lists[ 2 ].empty_list()
 								for row_idx, row in enumerate( l_query_result[ 2 ] ) : _l_lists[ 1 ].add_item( row )
-
 							case 1 :
 								_l_lists[ _log_list_id_int ].add_item( [ f'Activated album: { l_selected_data[ 1 ] }' ] )
 								_l_lists[ _log_list_id_int ].add_item( [ "Populating 'Songs' list." ] )
@@ -344,6 +400,7 @@ def main( p_stdscr ) :
 								FROM songs
 								WHERE songs.album_id = :album_id;
 								"""
+								l_query_result = None
 								l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'album_id' : f'{ l_selected_data[ 0 ] }' } )
 								_l_lists[ 2 ].empty_list()
 								for row_idx, row in enumerate( l_query_result[ 2 ] ) : _l_lists[ 2 ].add_item( row )
@@ -351,7 +408,11 @@ def main( p_stdscr ) :
 				_features_dialog( p_stdscr )
 			case curses.KEY_F3 :
 				# The search dialog
-				_search_dialog( p_stdscr )
+				l_return_value = _search_dialog( p_stdscr )
+				print( l_return_value )
+				if l_return_value is not None :
+					#_activate_item_with_id_from_table( l_return_value[ 0 ], l_return_value[ 2 ] )
+					_activate_item_with_id_from_table( l_return_value )
 			case curses.KEY_F8 :
 				# The Add menu
 				pass
@@ -362,9 +423,8 @@ def main( p_stdscr ) :
 				# The quit dialog
 				p_stdscr.clear()
 				_redraw_main_bars( p_stdscr )
+				# Ask the user if it is OK to quit
 				l_quit_menu_choice = get_menu_choice( p_stdscr, l_quit_menu_choices )
-				#p_stdscr.clear()
-				#_redraw_main_screen( p_stdscr, l_lists )
 				if l_quit_menu_choice == 1 : app_quit_flag = True
 			case curses.KEY_UP   : _l_lists[ _selected_list ].scroll_rel( -1 )
 			case curses.KEY_DOWN : _l_lists[ _selected_list ].scroll_rel( 1 )

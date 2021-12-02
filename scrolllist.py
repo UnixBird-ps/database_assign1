@@ -8,15 +8,21 @@ class ScrollList :
 
 		self.m_name_str = p_name_str
 
+		# Get the size of the screen
+		l_scr_size_yx = p_parent_window_obj.getmaxyx()
+
+		p_top_int = max( 1, p_top_int )
+		p_left_int = max( 0, p_left_int )
 		self.m_top_int = p_top_int
 		self.m_left_int = p_left_int
-		if p_lines_int < 3 : p_lines_int = 2
-		if p_cols_int < 3 : p_cols_int = 2
+		p_lines_int = max( 3, p_lines_int )
+		p_cols_int = max( 3, p_cols_int )
+		p_lines_int = min( l_scr_size_yx[ 0 ] - p_top_int, p_lines_int )
+		p_cols_int = min( l_scr_size_yx[ 1 ] - p_left_int, p_cols_int )
 		self.m_lines_int = p_lines_int
 		self.m_cols_int = p_cols_int
 		self.m_inner_lines_int = p_lines_int - 1
 		self.m_inner_cols_int = p_cols_int - 1
-
 		self.m_items_list = []
 		self.m_editable_bool = p_editable_bool
 		self.m_selected_item_int = -1
@@ -78,8 +84,7 @@ class ScrollList :
 	def redraw_list( self, p_has_focus_bool, p_shown_cols = None ) :
 		if p_shown_cols is None : p_shown_cols = []
 
-		#self.m_curses_win_obj.border()
-
+		# Draw a border with a color depending on if this list has focus os not
 		if p_has_focus_bool : self.m_curses_win_parent_obj.attron( self._LIGHT_GREEN_AND_BLACK )
 		else : self.m_curses_win_parent_obj.attron( self._DARK_GRAY_AND_BLACK )
 		rectangle(
@@ -98,17 +103,22 @@ class ScrollList :
 		else :
 			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 1, f' { self.m_name_str.title() } ', self.m_inner_cols_int -3 , self._DARK_GRAY_AND_BLACK )
 
+		# Draw content only if this list has items
 		if len( self.m_items_list ) > 0 :
 			# Get common width for every column
+			# Start with o length list for holding the column width
 			l_col_width_list = []
+			# Start with 0 width
 			for b_n in range( len( self.m_items_list[ 0 ] ) ) :
 				l_col_width_list.append( 0 )
+			# Compare value's length with widest yet
 			for i_row_idx, i_row in enumerate( self.m_items_list ):
 				for i_col_idx, col in enumerate( i_row ) :
 					l_width_int = len( str( col ) )
 					if l_width_int > l_col_width_list[ i_col_idx ] :
 						l_col_width_list[ i_col_idx ] = l_width_int
 
+			# Draw content of the list
 			for idx in range( self.m_inner_lines_int ) :
 				# Calculate list index
 				list_idx = self.m_scroll_region_top_int + idx
@@ -118,7 +128,6 @@ class ScrollList :
 
 				# Get row elements
 				itm = ''
-				#for field_idx, field in enumerate( self.m_items_list[ list_idx ] ) :
 				if len( p_shown_cols ) == 1 :
 					# Show exactly one field from the field id list
 					itm += f'{ self.m_items_list[ list_idx ][ p_shown_cols[ 0 ] ] }'
@@ -163,6 +172,23 @@ class ScrollList :
 			return True
 		else : return False
 
+
+	def select_item_on_key( self, p_key_str, p_value ) :
+		# Iterate through rows list
+		for row_idx, row_dict in enumerate( self.m_items_list ) :
+			# Check if key name exists in row
+			if p_key_str in row_dict :
+				self.m_curses_win_parent_obj.addstr( 0, 0, row_dict[ p_key_str ] )
+				if row_dict[ p_key_str ] == p_value :
+					self.select_item( self, row_idx )
+
+
+
+	def select_item( self, p_item_idx_int ) :
+		if p_item_idx_int > len( self.m_items_list ) - 1 : p_item_idx_int = len( self.m_items_list ) - 1
+		if p_item_idx_int < 0 : p_item_idx_int = 0
+		self.m_selected_item_int = p_item_idx_int
+		self.m_scroll_pointer_int = p_item_idx_int
 
 	def get_selected_item( self ) :
 		if len( self.m_items_list ) > 0 :

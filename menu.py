@@ -2,81 +2,88 @@ import curses
 from curses.textpad import rectangle
 import curses.ascii
 
+
 def get_menu_choice( p_stdscr, p_choices_list, p_selected_int = 0 ) :
-	# Clear the screen
-	#p_stdscr.clear()
 	# Get the size of the screen
 	l_scr_size_yx = p_stdscr.getmaxyx()
 	# Calculate half width and height
-	l_center_yx = ( int( l_scr_size_yx[ 0 ] / 2 ), int( l_scr_size_yx[ 1 ] / 2 ) )
-	# Find widest choice string
-	l_widest_int = len( p_choices_list[ 'title' ] )
-
+	l_scr_ctr_yx = ( int( l_scr_size_yx[ 0 ] / 2 ), int( l_scr_size_yx[ 1 ] / 2 ) )
+	# In case list does not fit inside the available space
+	l_scroll_region_top_int = 0
+	# Build a list of widest lenght in a column
+	# Start with 0 width
+	l_widest_row_int = len( p_choices_list[ 'title' ] )
 	# Set initial width of every column to 0
-	l_col_width_list = [ 0 for x in range( len( p_choices_list[ 'choices' ][ 0 ] ) ) ]
-	#l_col_width_list = [ 0 ] * len( p_choices_list[ 'choices' ][ 0 ] )
+	l_col_width_list = [ 0 ] * len( p_choices_list[ 'choices' ][ 0 ] )
+
 	# Go through all rows
-	for choice_idx, choice_row in enumerate( p_choices_list[ 'choices' ] ):
-		if len( str( choice_row[ 0 ] ) ) > l_widest_int : l_widest_int = len( str( choice_row[ 0 ] ) )
+	for choice_idx, choice_row in enumerate( p_choices_list[ 'choices' ] ) :
 		# Go through all flield to find widest item per column
 		for field_idx, field_value in enumerate( choice_row ) :
-			l_width_int = len( str( field_value ) )
-			if l_width_int > l_col_width_list[ field_idx ] :
-				l_col_width_list[ field_idx ] = l_width_int
+			l_col_width_list[ field_idx ] = max( l_col_width_list[ field_idx ], len( str( field_value ) ) )
+		l_widest_row_int = max( l_widest_row_int, sum( l_col_width_list ) )
 
 	# Start with an empty list
 	l_concatenated_fields_list = []
 
-	# Loop through all choice items, concatenate rows with multiple fields, find widest string
+	# Loop through all choice items, concatenate multiple fields in a row , find widest string
 	for choice_idx, choice_row in enumerate( p_choices_list[ 'choices' ] ) :
 		choice_itm_str = ''
 		if len( choice_row ) > 1 :
-			# Row contains multiple fields
-			# Go through all fields
+			# Row contains multiple fields, go through all fields
 			for field_idx, field_value in enumerate( choice_row ) :
 				if field_idx > 0 :
 					choice_itm_str += '  ' + str( field_value ).ljust( l_col_width_list[ field_idx ] )
 				else :
 					choice_itm_str += str( field_value ).rjust( l_col_width_list[ field_idx ] )
 			# Adjust widest width
-			if len( choice_itm_str ) > l_widest_int : l_widest_int = len( choice_itm_str )
+			l_widest_row_int = max( l_widest_row_int, len( choice_itm_str ) )
 		elif len( choice_row ) == 1 :
-			if len( str( choice_row[ 0 ] ) ) > l_widest_int : l_widest_int = len( str( choice_row[ 0 ] ) )
-
-		# Center adjust single field row
-		if len( choice_row ) == 1 :
-			choice_itm_str += str( choice_row[ 0 ] ) #.center( l_widest_int )
+			choice_itm_str += str( choice_row[ 0 ] )
 
 		# Add padding
-		l_padded_row_str = ' ' + choice_itm_str.center( l_widest_int ) + ' '
+		l_padded_row_str = ' ' + choice_itm_str.center( l_widest_row_int ) + ' '
 		# Add row to list
 		l_concatenated_fields_list.append( l_padded_row_str )
 
-	# Calculate half menu width and height
-	l_menu_half_yx = ( int( len( p_choices_list ) / 2 ), int( l_widest_int / 2 ) )
+	l_dlg_size_yx =\
+	(
+		# vertical:   top border + title + gap + number of choices + bottom border
+		1 + 1 + 1 + len( p_choices_list[ 'choices' ] ) + 0,
+		# horizontal: left border + padded widest string + right border
+		1 + l_widest_row_int + 1 + 1
+	)
 
-	l_yx = ( l_center_yx[ 0 ] - l_menu_half_yx[ 0 ] - 2, l_center_yx[ 1 ] - l_menu_half_yx[ 1 ] )
+	# Calculate half menu width and height
+	l_menu_half_yx = ( int( l_dlg_size_yx[ 0 ] / 2 ), int( l_dlg_size_yx[ 1 ] / 2 ) )
 
 	# Calculate uppler left corner coords
-	l_ulyx = ( max( 1, l_yx[ 0 ] - 1 ), max( 1, l_yx[ 1 ] - 1 ) )
-	# Calculate lower right corner coords
-	l_lryx = (
-		min( p_stdscr.getmaxyx()[ 0 ], l_yx[ 0 ] + 2 + len( p_choices_list[ 'choices' ] ) ),
-		min( p_stdscr.getmaxyx()[ 1 ], l_yx[ 1 ] + 2 + l_widest_int )
+	l_ulyx =\
+	(
+		max( 1, l_scr_ctr_yx[ 0 ] - l_menu_half_yx[ 0 ] ),
+		max( 0, l_scr_ctr_yx[ 1 ] - l_menu_half_yx[ 1 ] )
 	)
+	# Calculate lower right corner coords
+	l_lryx =\
+	(
+		min( p_stdscr.getmaxyx()[ 0 ], l_ulyx[ 0 ] + l_dlg_size_yx[ 0 ] ),
+		min( p_stdscr.getmaxyx()[ 1 ], l_ulyx[ 1 ] + l_dlg_size_yx[ 1 ] )
+	)
+
+	rectangle( p_stdscr, l_ulyx[ 0 ], l_ulyx[ 1 ], l_lryx[ 0 ], l_lryx[ 1 ] )
+	p_stdscr.refresh()
 
 	l_newwin = p_stdscr.subwin(
-		2 + len( p_choices_list[ 'choices' ] ),
-		2 + l_widest_int,
-		max( 1, l_yx[ 0 ] - 1 ),
-		max( 1, l_yx[ 1 ] - 1 )
+		max( 1, l_dlg_size_yx[ 0 ] ),
+		max( 1, l_dlg_size_yx[ 1 ] - 1 ),
+		max( 1, l_ulyx[ 0 ] + 1 ),
+		max( 0, l_ulyx[ 1 ] + 1 )
 	)
-	l_newwin.clear()
-	del l_newwin
-	rectangle( p_stdscr, l_ulyx[ 0 ], l_ulyx[ 1 ], l_lryx[ 0 ], l_lryx[ 1 ] )
+	l_newwin.refresh()
 
 	# Write the title
-	p_stdscr.addstr( l_yx[ 0 ], l_yx[ 1 ], p_choices_list[ 'title' ].center( l_widest_int + 2 ) )
+	l_newwin.addstr( 0, 0, p_choices_list[ 'title' ].center( l_widest_row_int + 2 ) )
+	l_newwin.addstr( 1, 0, ''.center( l_widest_row_int + 2 ) )
 
 	# Stay in menu loop until user hits ENTER or ESC key
 	l_user_key = -1
@@ -85,17 +92,18 @@ def get_menu_choice( p_stdscr, p_choices_list, p_selected_int = 0 ) :
 		if p_selected_int > len( p_choices_list[ 'choices' ] ) - 1 :
 			p_selected_int = len( p_choices_list[ 'choices' ] ) - 1
 		if p_selected_int < 0 : p_selected_int = 0
+
 		# Display the menu choices
 		for choice_idx, choice_row in enumerate( p_choices_list[ 'choices' ] ):
-			l_yx = ( l_center_yx[ 0 ] - l_menu_half_yx[ 0 ] + choice_idx, l_center_yx[ 1 ] - l_menu_half_yx[ 1 ] )
 			# Write row, with reversed colors if current row is selected
 			if choice_idx == p_selected_int:
-				p_stdscr.addstr( l_yx[ 0 ], l_yx[ 1 ], l_concatenated_fields_list[ choice_idx ], curses.A_REVERSE )
+				#pass
+				l_newwin.addstr( 2 + choice_idx, 0, l_concatenated_fields_list[ choice_idx ], curses.A_REVERSE )
 			else:
-				p_stdscr.addstr( l_yx[ 0 ], l_yx[ 1 ], l_concatenated_fields_list[ choice_idx ] )
-
+				#pass
+				l_newwin.addstr( 2 + choice_idx, 0, l_concatenated_fields_list[ choice_idx ] )
 		# Get key from user
-		l_user_key = p_stdscr.getch()
+		l_user_key = l_newwin.getch()
 		# Change selected item depending on user input
 		match l_user_key :
 			case curses.KEY_UP   : p_selected_int -= 1
@@ -103,6 +111,8 @@ def get_menu_choice( p_stdscr, p_choices_list, p_selected_int = 0 ) :
 			case 27 :
 				p_selected_int = -1
 				break
+	# Destroy the window dialog
+	del l_newwin
 	# Return choice id to caller
 	return p_selected_int
 
@@ -159,7 +169,6 @@ def get_string_from_input( p_stdscr, p_msg_str, p_input_length_max_int = 1 ) :
 		# Write the string to the screen
 		l_newwin.addstr( 0, len( p_msg_str ), l_input_str )
 		l_newwin.refresh()
-
 	# Destroy the window dialog
 	del l_newwin
 	# Hide blinking cursor
