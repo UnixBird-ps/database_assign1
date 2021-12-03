@@ -187,14 +187,13 @@ class ScrollList :
 		else : return False
 
 
-	def select_item_on_key( self, p_key_str, p_value ) :
+	def select_item_on_dict( self, p_selection_pair_dict ) :
 		# Iterate through rows list
 		for row_idx, row_dict in enumerate( self.m_items_list ) :
 			# Check if key name exists in row
-			if p_key_str in row_dict :
-				self.m_curses_win_parent_obj.addstr( 0, 0, row_dict[ p_key_str ] )
-				if row_dict[ p_key_str ] == p_value :
-					self.select_item( self, row_idx )
+			if p_selection_pair_dict[ 'id' ] in row_dict :
+				print( f'p_pair_dict:[{ p_selection_pair_dict }]' )
+				self.select_item( row_idx )
 
 
 

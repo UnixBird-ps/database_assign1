@@ -85,119 +85,16 @@ class App :
 		self.m_main_curses_window.addnstr( 0, 0, str( l_artists_selected_item ), self.m_main_curses_window.getmaxyx()[ 1 ] )
 
 
-	def reload_albums_table( self ) :
+	def reload_albums_table( self, p_artist_id ) :
 		self.m_lists[ 1 ].empty_list()
 		l_artists_selected_item = self.m_lists[ 0 ].get_selected_item()
 		self.m_main_curses_window.addnstr( 0, 0, str( l_artists_selected_item ), self.m_main_curses_window.getmaxyx()[ 1 ] )
 
 
-	def reload_songs_table( self ) :
+	def reload_songs_table( self, p_album_id ) :
 		self.m_lists[ 2 ].empty_list()
 		l_albums_selected_item = self.m_lists[ 1 ].get_selected_item()
 		self.m_main_curses_window.addnstr( 0, 0, str( l_albums_selected_item ), self.m_main_curses_window.getmaxyx()[ 1 ] )
-
-
-	def activate_item_with_id_from_table( self, p_selection_pair_dict ) :
-		match p_selection_pair_dict.get( 'table_name' ) :
-			case 'artists' :
-				# Switch list
-				_selected_list = 0
-				self.m_lists[ 0 ].select_item_on_key( 'id', p_selection_pair_dict.get( 'id' ) )
-		# 		l_selected_data = _l_lists[ 0 ].get_selected_item()
-		# 		l_sql_query =\
-		# 		'''
-		# 		SELECT *
-		# 		FROM albums
-		# 		WHERE albums.artist_id = :artist_id;
-		# 		'''
-		# 		l_query_result = None
-		# 		l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'artist_id' : f'{ l_selected_data[ 0 ] }' } )
-		# 		for row_idx, table_row in enumerate( l_query_result[ 2 ] ) :
-		# 			_l_lists[ 1 ].add_item( table_row )
-			case 'albums' :
-				# Load artist and album, activate both, switch list to albums, select this album
-				# Switch list
-				_selected_list = 1
-				self.reload_albums_table()
-				self.m_lists[ 1 ].select_item_on_key( 'id', p_selection_pair_dict.get( 'id' ) )
-		# 		l_query_result = sqlite_get( _db_file_name_str, 'SELECT * FROM albums' )
-		# 		for row_idx, table_row in enumerate( l_query_result[ 2 ] ) :
-		# 			_l_lists[ 1 ].add_item( table_row )
-		# 			if p_table_row_id == table_row[ 0 ] : _l_lists[ 1 ].select_item( row_idx )
-		# 		l_selected_data = _l_lists[ 1 ].get_selected_item()
-		#
-			case 'songs' :
-				# Load artist and album for this song, activate both, switch list to songs, select this song
-				_selected_list = 2
-				self.reload_songs_table()
-				self.m_lists[ 2 ].select_item_on_key( 'id', p_selection_pair_dict.get( 'id' ) )
-
-
-	def search_dialog( self ) :
-		# Get search string from user
-		l_user_input_str = get_string_from_input( self.m_main_curses_window, 'Search:', 32 )
-		# Init empty list
-		l_search_results_items = []
-		# Search in artists
-		l_sql_query =\
-		'''
-			SELECT artists.id, artists.name
-			FROM artists
-			WHERE artists.name LIKE :search_string;
-		'''
-		l_query_result = sqlite_get( self.m_db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
-		# For every row from the query append table name and add that row to menu list
-		if len( l_query_result[ 2 ] ) > 0 :
-			for row in l_query_result[ 2 ] :
-				row_2 = [ itm for itm in row ]
-				row_2.append( 'artists' )
-				l_search_results_items.append( row_2 )
-		# Search in albums
-		l_sql_query =\
-		'''
-			SELECT albums.id, albums.title
-			FROM albums
-			WHERE albums.title LIKE :search_string;
-		'''
-		l_query_result = sqlite_get( self.m_db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
-		# For every row from the query append table name and add that row to menu list
-		if len( l_query_result[ 2 ] ) > 0 :
-			for row in l_query_result[ 2 ] :
-				row_2 = [ itm for itm in row ]
-				row_2.append( 'albums' )
-				l_search_results_items.append( row_2 )
-		# Search in songs
-		l_sql_query =\
-		'''
-			SELECT songs.id, songs.name
-			FROM songs
-			WHERE songs.name LIKE :search_string;
-		'''
-		l_query_result = sqlite_get( self.m_db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
-		# For every row from the query append table name and add that row to menu list
-		if len( l_query_result[ 2 ] ) > 0 :
-			for row in l_query_result[ 2 ] :
-				row_2 = [ itm for itm in row ]
-				row_2.append( 'songs' )
-				l_search_results_items.append( row_2 )
-		# Create a menu with empty list
-		l_menu_choices =\
-		{
-			'choices' :
-			[
-				[ 'Go back' ]
-			],
-			'title' : 'Search results'
-		}
-		# Which specified fields to show in search results
-		for row in l_search_results_items :
-			# Add a row containing table name and row id to the list of choices
-			l_menu_choices[ 'choices' ].insert( max( 0, len( l_menu_choices[ 'choices' ] ) - 1 ), row ) #, [ 1, 2 ]
-		# Wait for user to respond, should return an index of the choice
-		l_menu_choice = get_menu_choice( self.m_main_curses_window, l_menu_choices, { 'selected_int' : 0, 'shown_cols_list' : [ 2, 1 ], 'justify_list' : [ 'right', 'left' ] } )
-		if 0 <= l_menu_choice < max( 0, len( l_menu_choices[ 'choices' ] ) - 1 ) :
-			# Return a dict
-			return { 'id' : l_search_results_items[ l_menu_choice ][ 0 ], 'table_name' : l_search_results_items[ l_menu_choice ][ 2 ] }
 
 
 	def features_dialog( self ) :
@@ -296,6 +193,111 @@ class App :
 
 		# Return to caller
 		return l_features_menu_choice
+
+
+	def activate_item_with_id_from_table( self, p_selection_pair_dict ) :
+		match p_selection_pair_dict.get( 'table_name' ) :
+			case 'artists' :
+				# Switch list
+				_selected_list = 0
+				self.m_lists[ 0 ].select_item_on_dict( p_selection_pair_dict )
+		# 		l_selected_data = _l_lists[ 0 ].get_selected_item()
+		# 		l_sql_query =\
+		# 		'''
+		# 		SELECT *
+		# 		FROM albums
+		# 		WHERE albums.artist_id = :artist_id;
+		# 		'''
+		# 		l_query_result = None
+		# 		l_query_result = sqlite_get( _db_file_name_str, l_sql_query, { 'artist_id' : f'{ l_selected_data[ 0 ] }' } )
+		# 		for row_idx, table_row in enumerate( l_query_result[ 2 ] ) :
+		# 			_l_lists[ 1 ].add_item( table_row )
+			case 'albums' :
+				# Load artist and album, activate both, switch list to albums, select this album
+				# Switch list
+				_selected_list = 1
+				self.reload_albums_table()
+				self.m_lists[ 1 ].select_item_on_dict( p_selection_pair_dict )
+				l_albums_selected_item = self.m_lists[ 1 ].get_selected_item()
+				self.m_lists[ self.m_log_list_id_int ].add_item( [ str( l_albums_selected_item ) ] )
+		# 		l_query_result = sqlite_get( _db_file_name_str, 'SELECT * FROM albums' )
+		# 		for row_idx, table_row in enumerate( l_query_result[ 2 ] ) :
+		# 			_l_lists[ 1 ].add_item( table_row )
+		# 			if p_table_row_id == table_row[ 0 ] : _l_lists[ 1 ].select_item( row_idx )
+		# 		l_selected_data = _l_lists[ 1 ].get_selected_item()
+				self.m_lists[ 1 ].select_item_on_dict( p_selection_pair_dict )
+			case 'songs' :
+				# Load artist and album for this song, activate both, switch list to songs, select this song
+				_selected_list = 2
+				self.reload_songs_table()
+				self.m_lists[ 2 ].select_item_on_dict( p_selection_pair_dict )
+
+
+	def search_dialog( self ) :
+		# Get search string from user
+		l_user_input_str = get_string_from_input( self.m_main_curses_window, 'Search:', 32 )
+		# Init empty list
+		l_search_results_items = []
+		# Search in artists
+		l_sql_query =\
+		'''
+			SELECT artists.id, artists.name
+			FROM artists
+			WHERE artists.name LIKE :search_string;
+		'''
+		l_query_result = sqlite_get( self.m_db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
+		# For every row from the query append table name and add that row to menu list
+		if len( l_query_result[ 2 ] ) > 0 :
+			for row in l_query_result[ 2 ] :
+				row_2 = [ itm for itm in row ]
+				row_2.append( 'artists' )
+				l_search_results_items.append( row_2 )
+		# Search in albums
+		l_sql_query =\
+		'''
+			SELECT albums.id, albums.title
+			FROM albums
+			WHERE albums.title LIKE :search_string;
+		'''
+		l_query_result = sqlite_get( self.m_db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
+		# For every row from the query append table name and add that row to menu list
+		if len( l_query_result[ 2 ] ) > 0 :
+			for row in l_query_result[ 2 ] :
+				row_2 = [ itm for itm in row ]
+				row_2.append( 'albums' )
+				l_search_results_items.append( row_2 )
+		# Search in songs
+		l_sql_query =\
+		'''
+			SELECT songs.id, songs.name
+			FROM songs
+			WHERE songs.name LIKE :search_string;
+		'''
+		l_query_result = sqlite_get( self.m_db_file_name_str, l_sql_query, { 'search_string' : f'%{ l_user_input_str }%' } )
+		# For every row from the query append table name and add that row to menu list
+		if len( l_query_result[ 2 ] ) > 0 :
+			for row in l_query_result[ 2 ] :
+				row_2 = [ itm for itm in row ]
+				row_2.append( 'songs' )
+				l_search_results_items.append( row_2 )
+		# Create a menu with empty list
+		l_menu_choices =\
+		{
+			'choices' :
+			[
+				[ 'Go back' ]
+			],
+			'title' : 'Search results'
+		}
+		# Which specified fields to show in search results
+		for row in l_search_results_items :
+			# Add a row containing table name and row id to the list of choices
+			l_menu_choices[ 'choices' ].insert( max( 0, len( l_menu_choices[ 'choices' ] ) - 1 ), row ) #, [ 1, 2 ]
+		# Wait for user to respond, should return an index of the choice
+		l_menu_choice = get_menu_choice( self.m_main_curses_window, l_menu_choices, { 'selected_int' : 0, 'shown_cols_list' : [ 2, 1 ], 'justify_list' : [ 'right', 'left' ] } )
+		if 0 <= l_menu_choice < max( 0, len( l_menu_choices[ 'choices' ] ) - 1 ) :
+			# Return a dict
+			return { 'id' : l_search_results_items[ l_menu_choice ][ 0 ], 'table_name' : l_search_results_items[ l_menu_choice ][ 2 ] }
 
 
 	def run( self, p_stdscr ) :
