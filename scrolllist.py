@@ -3,6 +3,7 @@ from curses.textpad import rectangle
 
 
 class ScrollList :
+
 	def __init__( self, p_parent_window_obj, p_name_str, p_editable_bool, p_lines_int, p_cols_int, p_top_int, p_left_int, p_auto_scroll_bool, p_disabled_keys = None ) :
 		if p_disabled_keys is None : p_disabled_keys = []
 
@@ -11,7 +12,7 @@ class ScrollList :
 		# Get the size of the screen
 		l_scr_size_yx = p_parent_window_obj.getmaxyx()
 
-		p_top_int = max( 1, p_top_int )
+		p_top_int = max( 0, p_top_int )
 		p_left_int = max( 0, p_left_int )
 		self.m_top_int = p_top_int
 		self.m_left_int = p_left_int
@@ -81,8 +82,15 @@ class ScrollList :
 		self.m_curses_win_obj = p_parent.subwin( self.m_inner_lines_int + 1, self.m_inner_cols_int + 1, self.m_top_int + 1, self.m_left_int + 1 )
 
 
-	def redraw_list( self, p_has_focus_bool, p_shown_cols = None ) :
-		if p_shown_cols is None : p_shown_cols = []
+	def redraw_list( self, p_has_focus_bool, p_options = None ) :
+		l_shown_cols_list = []
+		l_justify_list = []
+		if len( self.m_items_list ) > 0 :
+			l_shown_cols_list = range( len( self.m_items_list[ 0 ] ) )
+			l_justify_list = [ 'center' ] * len( self.m_items_list[ 0 ] )
+		if not p_options is None :
+			if 'shown_cols_list' in list( p_options ) : l_shown_cols_list = p_options.get( 'shown_cols_list' )
+			if 'justify_list' in list( p_options ) : l_justify_list = p_options.get( 'justify_list' )
 
 		# Draw a border with a color depending on if this list has focus os not
 		if p_has_focus_bool : self.m_curses_win_parent_obj.attron( self._LIGHT_GREEN_AND_BLACK )
@@ -106,11 +114,8 @@ class ScrollList :
 		# Draw content only if this list has items
 		if len( self.m_items_list ) > 0 :
 			# Get common width for every column
-			# Start with o length list for holding the column width
-			l_col_width_list = []
 			# Start with 0 width
-			for b_n in range( len( self.m_items_list[ 0 ] ) ) :
-				l_col_width_list.append( 0 )
+			l_col_width_list = [ 0 ] * len( self.m_items_list[ 0 ] )
 			# Compare value's length with widest yet
 			for i_row_idx, i_row in enumerate( self.m_items_list ):
 				for i_col_idx, col in enumerate( i_row ) :
@@ -125,23 +130,32 @@ class ScrollList :
 				# Make sure selected index is within bounds
 				if list_idx < 0 : break
 				if list_idx >= len( self.m_items_list ) : break
-
 				# Get row elements
 				itm = ''
-				if len( p_shown_cols ) == 1 :
+				if len( l_shown_cols_list ) == 1 :
 					# Show exactly one field from the field id list
-					itm += f'{ self.m_items_list[ list_idx ][ p_shown_cols[ 0 ] ] }'
-				elif len( p_shown_cols ) > 1 :
-					l_width_available = self.m_inner_cols_int - 2 - l_col_width_list[ p_shown_cols[ -1 ] ]
-					for shown_idx_key, shown_idx_value in enumerate( p_shown_cols ) :
+					itm += f'{ self.m_items_list[ list_idx ][ l_shown_cols_list[ 0 ] ] }'
+				elif len( l_shown_cols_list ) > 1 :
+					# Make room for last field
+					l_width_available = self.m_inner_cols_int - 2 - l_col_width_list[ l_shown_cols_list[ -1 ] ]
+					for shown_col_itr, shown_col_value in enumerate( l_shown_cols_list ) :
 						# Store the value
-						l_value = self.m_items_list[ list_idx ][ shown_idx_value ]
-						if shown_idx_key != len( p_shown_cols ) - 1 :
+						l_value = str( self.m_items_list[ list_idx ][ shown_col_value ] ).strip()
+						l_justify_value = l_justify_list[ shown_col_itr ]
+
+						if shown_col_itr != len( l_shown_cols_list ) - 1 :
 							# What columns in list to show
-							itm += f'{ l_value }'[ :l_width_available ].ljust( l_width_available )
+							match l_justify_value :
+								case 'left' :
+									itm += f'{ l_value }'[ :l_width_available ].ljust( l_width_available )
+								case 'right' :
+									itm += f'{ l_value }'[ :l_width_available ].rjust( l_width_available )
+								case 'center' :
+									itm += f'{ l_value }'[ :l_width_available ].center( l_width_available )
 						else :
-							# What columns in list to show
-							itm += f'{ l_value }'[ :l_col_width_list[ p_shown_cols[ -1 ] ] ].rjust( l_col_width_list[ p_shown_cols[ -1 ] ] )
+							# Last column is special
+							itm += f'{ l_value }'[ :l_col_width_list[ l_shown_cols_list[ -1 ] ] ].rjust( l_col_width_list[ l_shown_cols_list[ -1 ] ] )
+
 
 				# Add padding
 				itm = itm[ : self.m_inner_cols_int - 2 ].ljust( self.m_inner_cols_int - 2 )

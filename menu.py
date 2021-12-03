@@ -3,7 +3,16 @@ from curses.textpad import rectangle
 import curses.ascii
 
 
-def get_menu_choice( p_stdscr, p_choices_list, p_selected_int = 0 ) :
+def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
+	l_selected_int = 0
+	l_shown_cols_list = range( len( p_choices_list[ 'choices' ][ 0 ] ) )
+	l_justify_list = [ 'center' ] * len( p_choices_list[ 'choices' ][ 0 ] )
+
+	if not p_options is None :
+		if 'selected_int' in list( p_options ) : l_selected_int = p_options.get( 'selected_int' )
+		if 'shown_cols_list' in list( p_options ) : l_shown_cols_list = p_options.get( 'shown_cols_list' )
+		if 'justify_list' in list( p_options ) : l_justify_list = p_options.get( 'justify_list' )
+
 	# Get the size of the screen
 	l_scr_size_yx = p_stdscr.getmaxyx()
 	# Calculate half width and height
@@ -22,22 +31,32 @@ def get_menu_choice( p_stdscr, p_choices_list, p_selected_int = 0 ) :
 	for choice_idx, choice_row in enumerate( p_choices_list[ 'choices' ] ) :
 		# Go through all flield to find widest item per column
 		for field_idx, field_value in enumerate( choice_row ) :
+			#if field_idx not in l_shown_cols_list : break
 			l_col_width_list[ field_idx ] = max( l_col_width_list[ field_idx ], len( str( field_value ) ) )
 		l_widest_row_int = max( l_widest_row_int, sum( l_col_width_list ) )
 
-	# Start with an empty list for multi-column items
+	# Start with an empty list for multi-column rows
 	l_concatenated_fields_list = []
 
 	# Loop through all choice items, concatenate multiple fields in a row , find widest string
 	for choice_idx, choice_row in enumerate( p_choices_list[ 'choices' ] ) :
 		choice_itm_str = ''
-		if len( choice_row ) > 1 :
+		if len( list( choice_row ) ) > 1 :
 			# Row contains multiple fields, concatenate them together
-			for field_idx, field_value in enumerate( choice_row ) :
-				if field_idx > 0 :
-					choice_itm_str += '  ' + str( field_value ).ljust( l_col_width_list[ field_idx ] )
-				else :
-					choice_itm_str += str( field_value ).rjust( l_col_width_list[ field_idx ] )
+			for shown_col_itr, shown_col_value in enumerate( l_shown_cols_list ) :
+				if shown_col_itr > 0 :
+					choice_itm_str += '  '
+				if 0 <= shown_col_value < len( choice_row ) :
+					# Store the value
+					field_value = choice_row[ shown_col_value ]
+					l_justify_value = l_justify_list[ shown_col_itr ]
+					match l_justify_value :
+						case 'left' :
+							choice_itm_str += str( field_value ).ljust( l_col_width_list[ shown_col_value ] )
+						case 'right' :
+							choice_itm_str += str( field_value ).rjust( l_col_width_list[ shown_col_value ] )
+						case 'center' :
+							choice_itm_str += str( field_value ).center( l_col_width_list[ shown_col_value ] )
 			# Adjust widest width
 			l_widest_row_int = max( l_widest_row_int, len( choice_itm_str ) )
 		elif len( choice_row ) == 1 :
@@ -93,15 +112,15 @@ def get_menu_choice( p_stdscr, p_choices_list, p_selected_int = 0 ) :
 	while l_user_key not in [ curses.KEY_ENTER, 459, 13, 10, 27 ] :
 		# Lmits
 		# Make sure the selector is within bounderies of the list
-		if p_selected_int > len( p_choices_list[ 'choices' ] ) - 1 :
-			p_selected_int = len( p_choices_list[ 'choices' ] ) - 1
-		if p_selected_int < 0 : p_selected_int = 0
+		if l_selected_int > len( p_choices_list[ 'choices' ] ) - 1 :
+			l_selected_int = len( p_choices_list[ 'choices' ] ) - 1
+		if l_selected_int < 0 : l_selected_int = 0
 		# Make sure that the selector does not go beyond list's last visible item
-		if l_scroll_region_top_int < p_selected_int - l_max_visible_list_lines + 1:
-			l_scroll_region_top_int = p_selected_int - l_max_visible_list_lines + 1
+		if l_scroll_region_top_int < l_selected_int - l_max_visible_list_lines + 1:
+			l_scroll_region_top_int = l_selected_int - l_max_visible_list_lines + 1
 		# Make sure that the selector does not go beyond list's first visible item
-		if l_scroll_region_top_int > p_selected_int :
-			l_scroll_region_top_int = p_selected_int
+		if l_scroll_region_top_int > l_selected_int :
+			l_scroll_region_top_int = l_selected_int
 		# Make sure that the selector does not go beyond list's first index ( 0 )
 		if l_scroll_region_top_int < 0 :
 			l_scroll_region_top_int = 0
@@ -117,25 +136,23 @@ def get_menu_choice( p_stdscr, p_choices_list, p_selected_int = 0 ) :
 			#choice_row = p_choices_list[ 'choices' ][ choice_idx ]
 
 			# Write row, with reversed colors if current row is selected
-			if choice_idx == p_selected_int:
-				#pass
+			if choice_idx == l_selected_int:
 				l_newwin.addstr( 2 + vis_idx, 0, l_concatenated_fields_list[ choice_idx ], curses.A_REVERSE )
 			else:
-				#pass
 				l_newwin.addstr( 2 + vis_idx, 0, l_concatenated_fields_list[ choice_idx ] )
 		# Get key from user
 		l_user_key = l_newwin.getch()
 		# Change selected item depending on user input
 		match l_user_key :
-			case curses.KEY_UP   : p_selected_int -= 1
-			case curses.KEY_DOWN : p_selected_int += 1
+			case curses.KEY_UP   : l_selected_int -= 1
+			case curses.KEY_DOWN : l_selected_int += 1
 			case 27 :
-				p_selected_int = -1
+				l_selected_int = -1
 				break
 	# Destroy the window dialog
 	del l_newwin
 	# Return choice id to caller
-	return p_selected_int
+	return l_selected_int
 
 
 def get_string_from_input( p_stdscr, p_msg_str, p_input_length_max_int = 1 ) :
