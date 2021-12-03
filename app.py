@@ -132,20 +132,21 @@ def _features_dialog( p_stdscr ) :
 	{
 		'choices' :
 		[
-			[ 'Find the oldest album' ],
-			[ 'Find the album with the longest playing time' ],
+			[ 'Oldest album' ],
+			[ 'Album with the longest playing time' ],
+			[ 'Average song length' ],
 			[ 'Go to main screen' ]
 		],
 		'title' : 'What to show?'
 	}
 	# Calculate index for last menu item
 	l_last_menu_item = len( l_features_menu_choices[ 'choices' ] ) - 1
-	if l_last_menu_item < 0 : l_last_menu_item = 0
+	#if l_last_menu_item < 0 : l_last_menu_item = 0
 
 	# Loop until last item - 'Go to main screen' is selected
 	l_features_menu_choice = -1
 	while l_features_menu_choice != l_last_menu_item :
-		p_stdscr.clear()
+		#p_stdscr.clear()
 		_redraw_main_bars( p_stdscr )
 		l_features_menu_choice = get_menu_choice( p_stdscr, l_features_menu_choices, l_features_menu_choice )
 		match l_features_menu_choice :
@@ -201,6 +202,25 @@ def _features_dialog( p_stdscr ) :
 							[ 'Go back' ]
 						],
 						'title' : f'Album with longest playing time: "{ l_query_result[ 2 ][ 0 ][ 1 ] }" ({ l_query_result[ 2 ][ 0 ][ 2 ] }) length: { l_query_result[ 2 ][ 0 ][ 3 ] }'
+					}
+					get_menu_choice( p_stdscr, l_msg_box_choices )
+			case 2 :
+				# Get average song length
+				l_sql_query =\
+				'''
+					SELECT CAST( CAST( AVG( songs.duration ) / 60 AS INT) AS STRING ) || ':' || PRINTF( '%02d', AVG( songs.duration ) % 60 ) AS average_duration
+					FROM songs
+				'''
+				l_query_result = None
+				l_query_result = sqlite_get( _db_file_name_str, l_sql_query )
+				if not l_query_result is None :
+					l_msg_box_choices =\
+					{
+						'choices' :
+						[
+							[ 'Go back' ]
+						],
+						'title' : f'Average song length: { l_query_result[ 2 ][ 0 ][ 0 ] }'
 					}
 					get_menu_choice( p_stdscr, l_msg_box_choices )
 
@@ -421,7 +441,7 @@ def main( p_stdscr ) :
 				pass
 			case curses.KEY_F10 :
 				# The quit dialog
-				p_stdscr.clear()
+				#p_stdscr.clear()
 				_redraw_main_bars( p_stdscr )
 				# Ask the user if it is OK to quit
 				l_quit_menu_choice = get_menu_choice( p_stdscr, l_quit_menu_choices )

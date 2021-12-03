@@ -99,7 +99,7 @@ class ScrollList :
 
 		# Put the name of the list on the border above the list
 		if p_has_focus_bool :
-			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 1, f' { self.m_name_str.title() } ', self.m_inner_cols_int - 3 )
+			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 1, f' { self.m_name_str.title() } ', self.m_inner_cols_int - 3, self._LIGHT_GREEN_AND_BLACK )
 		else :
 			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 1, f' { self.m_name_str.title() } ', self.m_inner_cols_int -3 , self._DARK_GRAY_AND_BLACK )
 
@@ -197,14 +197,20 @@ class ScrollList :
 
 
 	def scroll_rel( self, p_rel_pos_int  ) :
+		# Only if list is not empty
 		if len( self.m_items_list ) > 0 :
 			self.m_scroll_pointer_int += p_rel_pos_int
+			# Limits
+			# Make sure that the scroll pointer does not go beyond list's last index
 			if self.m_scroll_pointer_int > len( self.m_items_list ) - 1 :
 				self.m_scroll_pointer_int = len( self.m_items_list ) - 1
+			# Make sure that the scroll pointer does not go beyond list's first index ( 0 )
 			if self.m_scroll_pointer_int < 0 :
 				self.m_scroll_pointer_int = 0
-			if self.m_scroll_pointer_int < self.m_scroll_region_top_int :
+			# Make sure that the scroll pointer does not go beyond list's first visible item
+			if self.m_scroll_region_top_int > self.m_scroll_pointer_int :
 				self.m_scroll_region_top_int = self.m_scroll_pointer_int
+			# Make sure that the scroll pointer does not go beyond list's last visible item
 			if self.m_scroll_region_top_int < self.m_scroll_pointer_int - ( self.m_inner_lines_int - 1 ) :
 				self.m_scroll_region_top_int = self.m_scroll_pointer_int - ( self.m_inner_lines_int - 1 )
 			if self.m_scroll_region_top_int < 0 : self.m_scroll_region_top_int = 0
