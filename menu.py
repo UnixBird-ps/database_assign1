@@ -1,18 +1,17 @@
 import curses
 from curses.textpad import rectangle
 import curses.ascii
+from utils import debug_info
 
 
 def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 	l_selected_int = 0
-	l_shown_cols_list = range( len( p_choices_list[ 'choices' ][ 0 ] ) )
+	l_shown_cols_list = [ 1 ] #range( len( p_choices_list[ 'choices' ][ 0 ] ) )
 	l_justify_list = [ 'center' ] * len( p_choices_list[ 'choices' ][ 0 ] )
-
 	if not p_options is None :
 		if 'selected_int' in list( p_options ) : l_selected_int = p_options.get( 'selected_int' )
 		if 'shown_cols_list' in list( p_options ) : l_shown_cols_list = p_options.get( 'shown_cols_list' )
 		if 'justify_list' in list( p_options ) : l_justify_list = p_options.get( 'justify_list' )
-
 	# Get the size of the screen
 	l_scr_size_yx = p_stdscr.getmaxyx()
 	# Calculate half width and height
@@ -22,17 +21,25 @@ def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 	# Max lines in scrollable region if list does not fit on screen
 	# Screen lines minus top bar, minus 2 dialog horizontal borders, minus title, minus one line gap, minus status bar
 	l_max_visible_list_lines = min( l_scr_size_yx[ 0 ] - 1 - 2 - 2 - 1, len( p_choices_list[ 'choices' ] ) )
-	# Build a list of widest lenghts of a column
+	# Find max num of cols
+	l_num_of_fields = 0
+	for choice_row in p_choices_list[ 'choices' ] :
+		debug_info( f'length of choice_row:{ len( choice_row ) }  { choice_row }' )
+		l_num_of_fields = max( l_num_of_fields, len( choice_row ) )
+	debug_info( f'l_num_of_fields:{ l_num_of_fields }' )
+	# Build a list of column widths
 	# Start with 0 width
 	l_widest_row_int = len( p_choices_list[ 'title' ] )
 	# Set initial width of every column to 0
-	l_col_width_list = [ 0 ] * len( p_choices_list[ 'choices' ][ 0 ] )
+	l_col_width_list = [ 0 ] * l_num_of_fields #len( p_choices_list[ 'choices' ][ 0 ] )
 	# Go through all rows
-	for choice_idx, choice_row in enumerate( p_choices_list[ 'choices' ] ) :
-		# Go through all flield to find widest item per column
-		for field_idx, field_value in enumerate( choice_row ) :
+	for choice_itr, choice_row in enumerate( p_choices_list[ 'choices' ] ) :
+		#debug_info( f'{ choice_itr }, { choice_row }' )
+		# Go through all fields in a row to find widest common column width
+		for field_itr, field_val in enumerate( choice_row ) :
+			#debug_info( f'{ field_itr }, { field_val }' )
 			#if field_idx not in l_shown_cols_list : break
-			l_col_width_list[ field_idx ] = max( l_col_width_list[ field_idx ], len( str( field_value ) ) )
+			l_col_width_list[ field_itr ] = max( l_col_width_list[ field_itr ], len( str( field_val ) ) )
 		l_widest_row_int = max( l_widest_row_int, sum( l_col_width_list ) )
 
 	# Start with an empty list for multi-column rows
@@ -48,7 +55,7 @@ def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 					choice_itm_str += '  '
 				if 0 <= shown_col_value < len( choice_row ) :
 					# Store the value
-					field_value = choice_row[ shown_col_value ]
+					field_value = choice_row[ list( choice_row )[ shown_col_value ] ]
 					l_justify_value = l_justify_list[ shown_col_itr ]
 					match l_justify_value :
 						case 'left' :
@@ -63,7 +70,7 @@ def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 			choice_itm_str += str( choice_row[ 0 ] )
 
 		# Add padding
-		l_padded_row_str = ' ' + choice_itm_str.center( l_widest_row_int ) + ' '
+		l_padded_row_str = '<' + f'>{ choice_itm_str }<'.center( l_widest_row_int ) + '>'
 		# Add row to list
 		l_concatenated_fields_list.append( l_padded_row_str )
 
@@ -71,9 +78,9 @@ def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 	l_dlg_size_yx =\
 	(
 		# vertical:   top border + title + gap + number of choices + bottom border
-		l_max_visible_list_lines + 1 + 1 + 1,
+		min( l_scr_size_yx[ 0 ] - 2, l_max_visible_list_lines + 1 + 1 + 1 ),
 		# horizontal: left border + padded widest string + right border
-		1 + l_widest_row_int + 1 + 1
+		min( l_scr_size_yx[ 1 ], 1 + l_widest_row_int + 1 + 1 )
 	)
 
 	# Calculate half menu width and height
@@ -89,7 +96,7 @@ def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 	l_lryx =\
 	(
 		min( p_stdscr.getmaxyx()[ 0 ], l_ulyx[ 0 ] + l_dlg_size_yx[ 0 ] ),
-		min( p_stdscr.getmaxyx()[ 1 ], l_ulyx[ 1 ] + l_dlg_size_yx[ 1 ] )
+		min( p_stdscr.getmaxyx()[ 1 ] - 2, l_ulyx[ 1 ] + l_dlg_size_yx[ 1 ] )
 	)
 
 	rectangle( p_stdscr, l_ulyx[ 0 ], l_ulyx[ 1 ], l_lryx[ 0 ], l_lryx[ 1 ] )

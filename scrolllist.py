@@ -1,5 +1,6 @@
 import curses
 from curses.textpad import rectangle
+from utils import debug_info
 
 
 class ScrollList :
@@ -117,12 +118,9 @@ class ScrollList :
 			# Start with 0 width
 			l_col_width_list = [ 0 ] * len( self.m_items_list[ 0 ] )
 			# Compare value's length with widest yet
-			for i_row_idx, i_row in enumerate( self.m_items_list ):
-				for i_col_idx, col in enumerate( i_row ) :
-					l_width_int = len( str( col ) )
-					if l_width_int > l_col_width_list[ i_col_idx ] :
-						l_col_width_list[ i_col_idx ] = l_width_int
-
+			for row_itr, row_val in enumerate( self.m_items_list ):
+				for field_itr, field_val in enumerate( row_val ) :
+					l_col_width_list[ field_itr ] = max( l_col_width_list[ field_itr ], len( str( field_val) ) )
 			# Draw content of the list
 			for idx in range( self.m_inner_lines_int ) :
 				# Calculate list index
