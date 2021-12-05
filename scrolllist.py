@@ -5,10 +5,10 @@ from utils import debug_info
 
 class ScrollList :
 
-	def __init__( self, p_parent_window_obj, p_name_str, p_editable_bool, p_lines_int, p_cols_int, p_top_int, p_left_int, p_auto_scroll_bool, p_disabled_keys = None ) :
+	def __init__( self, p_parent_window_obj, p_name, p_editable_bool, p_lines_int, p_cols_int, p_top_int, p_left_int, p_auto_scroll_bool, p_disabled_keys = None ) :
 		if p_disabled_keys is None : p_disabled_keys = []
 
-		self.m_name_str = p_name_str
+		self.m_name = p_name
 
 		# Get the size of the screen
 		l_scr_size_yx = p_parent_window_obj.getmaxyx()
@@ -78,6 +78,10 @@ class ScrollList :
 		#self.m_curses_win_obj.idlok( 1 )
 
 
+	def get_name( self ) :
+		return self.m_name
+
+
 	def create_window( self, p_parent ) :
 		self.m_curses_win_parent_obj = p_parent
 		self.m_curses_win_obj = p_parent.subwin( self.m_inner_lines_int + 1, self.m_inner_cols_int + 1, self.m_top_int + 1, self.m_left_int + 1 )
@@ -108,9 +112,9 @@ class ScrollList :
 
 		# Put the name of the list on the border above the list
 		if p_has_focus_bool :
-			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 1, f' { self.m_name_str.title() } ', self.m_inner_cols_int - 3, self._LIGHT_GREEN_AND_BLACK )
+			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 1, f' { self.m_name.title() } ', self.m_inner_cols_int - 3, self._LIGHT_GREEN_AND_BLACK )
 		else :
-			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 1, f' { self.m_name_str.title() } ', self.m_inner_cols_int -3 , self._DARK_GRAY_AND_BLACK )
+			self.m_curses_win_parent_obj.addnstr( self.m_top_int, self.m_left_int + 1, f' { self.m_name.title() } ', self.m_inner_cols_int -3 , self._DARK_GRAY_AND_BLACK )
 
 		# Draw content only if this list has items
 		if len( self.m_items_list ) > 0 :

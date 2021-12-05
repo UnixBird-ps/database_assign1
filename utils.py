@@ -1,7 +1,7 @@
 from inspect import getframeinfo, stack
 
 
-def debug_info( p_msg ) :
+def debug_info( p_msg = '' ) :
 	"""
 	Outputs the name of the source code file and the line number where the message is sent from
 	Used only for debugging

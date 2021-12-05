@@ -413,17 +413,20 @@ class App :
 		l_available_screen_width = l_scr_size_yx[ 1 ] - self.m_lists[ 0 ].m_left_int - self.m_lists[ 0 ].m_cols_int - 2
 		self.m_lists.append( ScrollList( self.m_main_curses_window, 'log', False, l_available_screen_height, l_available_screen_width, self.m_lists[ 0 ].m_top_int + self.m_lists[ 0 ].m_lines_int + 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, True, [ curses.KEY_ENTER, 13, 10 ] ) )
 		self.m_log_list_idx = len( self.m_lists ) - 1
+
 		# Add a message to the log
 		self.add_log( f'Welcome to { self.m_app_title } { self.m_app_version }.' )
 		# Populate UI lists with data from database
 		self.reload_artists()
-		# Reload albums that belongs to this artist
+		# Select first album of that artist
+		self.m_lists[ self.m_artists_list_idx ].select_first()
+		# Reload albums that belong to this artist
 		self.reload_albums_on_artist( self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'id' ) )
 		# Select first album of that artist
 		self.m_lists[ self.m_albums_list_idx ].select_first()
 		# Reload songs that belong to this album
 		self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
-		# Select first song of that album
+		# # Select first song of that album
 		self.m_lists[ self.m_songs_list_idx ].select_first()
 
 		# Create menus
@@ -464,20 +467,33 @@ class App :
 					self.m_lists[ self.m_selected_list_idx ].m_curses_win_obj.refresh()
 				case curses.KEY_ENTER | 459 | 13 | 10 :
 					if not any( x in [ curses.KEY_ENTER, 13, 10 ] for x in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys ) and self.m_lists[ self.m_selected_list_idx ].select_item_pointed() :
-						l_selected_data = self.m_lists[ self.m_selected_list_idx ].get_selected_item()
-						if l_selected_data is not None :
+						#l_selected_data = self.m_lists[ self.m_selected_list_idx ].get_selected_item()
+						#if l_selected_data is not None :
 							match self.m_selected_list_idx :
 								case 0 :
-									self.add_log( f'Activated artist: { l_selected_data[ list( l_selected_data )[ 1 ] ] }' )
-									self.reload_albums_on_artist( l_selected_data[ list( l_selected_data )[ 0 ] ] )
+									self.add_log( 'Activated artist: ' + self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'name' ) )
+									# Reload albums that belong to this artist
+									self.reload_albums_on_artist( self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'id' ) )
+									#self.reload_albums_on_artist( l_selected_data[ list( l_selected_data )[ 0 ] ] )
+									# Select first album of that artist
+									self.m_lists[ self.m_albums_list_idx ].select_first()
+									# Reload songs that belong to this album
+									self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
+									# # Select first song of that album
+									self.m_lists[ self.m_songs_list_idx ].select_first()
 								case 1 :
-									self.add_log( f'Activated album: { l_selected_data[ list( l_selected_data )[ 1 ] ] }' )
-									self.reload_songs_on_album( l_selected_data[ list( l_selected_data )[ 0 ] ] )
+									self.add_log( 'Activated album: ' + self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'title' ) )
+									# Reload songs that belong to this album
+									self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
+									# # Select first song of that album
+									self.m_lists[ self.m_songs_list_idx ].select_first()
 				case curses.KEY_F1 :
 					self.features_dialog()
 				case curses.KEY_F3 :
 					# The search dialog
 					self.search_dialog()
+				case curses.KEY_F4 :
+					self.edit_dialog()
 				case curses.KEY_F8 :
 					# The Add menu
 					pass
