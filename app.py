@@ -382,6 +382,33 @@ class App :
 					self.m_selected_list_idx = self.m_songs_list_idx
 
 
+	def edit_dialog( self ) :
+		# Items in the log list are not editable, return
+		if self.m_selected_list_idx == self.m_songs_list_idx : return
+
+		self.add_log( self.m_lists[ self.m_selected_list_idx ].get_name() )
+
+		# For artist
+		# 1. name
+		# 2. description
+		l_dialog_dict = []
+		l_dialog_dict.append( { 'input_kind' : 'single' , 'field' : 'name',         'max_length' :  20, 'value' : '' } )
+		l_dialog_dict.append( { 'input_kind' : 'multi'  , 'field' : 'description' , 'max_length' : 250, 'value' : '' } )
+		debug_info()
+		print( l_dialog_dict )
+
+		# For album
+		# 1. title
+		# 2. description
+		# 3. year_released
+		# 4. connection to selected artist_id
+
+		# For song
+		# 1. name
+		# 2. duration
+		# 3. connection to selected album_id
+
+
 	def run( self, p_stdscr ) :
 		self.m_main_curses_window = p_stdscr
 
