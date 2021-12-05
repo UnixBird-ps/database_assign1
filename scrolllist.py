@@ -124,23 +124,23 @@ class ScrollList :
 			# Draw content of the list
 			for idx in range( self.m_inner_lines_int ) :
 				# Calculate list index
-				list_idx = self.m_scroll_region_top_int + idx
+				item_idx = self.m_scroll_region_top_int + idx
 				# Make sure selected index is within bounds
-				if list_idx < 0 : break
-				if list_idx >= len( self.m_items_list ) : break
+				if item_idx < 0 : break
+				if item_idx >= len( self.m_items_list ) : break
 				# Get row elements
 				itm = ''
+				l_list_row_dict = self.m_items_list[ item_idx ]
 				if len( l_shown_cols_list ) == 1 :
 					# Show exactly one field from the field id list
-					itm += f'{ self.m_items_list[ list_idx ][ l_shown_cols_list[ 0 ] ] }'
+					itm += f'{ l_list_row_dict.get( list( l_list_row_dict )[ l_shown_cols_list[ 0 ] ] ) }'
 				elif len( l_shown_cols_list ) > 1 :
 					# Make room for last field
 					l_width_available = self.m_inner_cols_int - 2 - l_col_width_list[ l_shown_cols_list[ -1 ] ]
 					for shown_col_itr, shown_col_value in enumerate( l_shown_cols_list ) :
 						# Store the value
-						l_value = str( self.m_items_list[ list_idx ][ shown_col_value ] ).strip()
+						l_value = str( l_list_row_dict[ list( l_list_row_dict )[ shown_col_value ] ] ).strip()
 						l_justify_value = l_justify_list[ shown_col_itr ]
-
 						if shown_col_itr != len( l_shown_cols_list ) - 1 :
 							# What columns in list to show
 							match l_justify_value :
@@ -160,12 +160,12 @@ class ScrollList :
 				itm = ' ' + itm + ' '
 
 				# Draw selection differently
-				if list_idx == self.m_scroll_pointer_int and p_has_focus_bool :
+				if item_idx == self.m_scroll_pointer_int and p_has_focus_bool :
 					self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
 				else :
 					self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int )
 
-				if list_idx == self.m_selected_item_int :
+				if item_idx == self.m_selected_item_int :
 					if p_has_focus_bool :
 						self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, curses.A_REVERSE )
 					else :
@@ -185,14 +185,27 @@ class ScrollList :
 		else : return False
 
 
-	def select_item_on_dict( self, p_selection_pair_dict ) :
+	def select_item_on_dict( self, p_selection_dict ) :
 		# Iterate through rows list
-		for row_idx, row_dict in enumerate( self.m_items_list ) :
-			# Check if key name exists in row
-			if p_selection_pair_dict[ 'id' ] in row_dict :
-				print( f'p_pair_dict:[{ p_selection_pair_dict }]' )
-				self.select_item( row_idx )
+		for row_itr, row_dict in enumerate( self.m_items_list ) :
+			l_found = True
 
+			# check every key in p_selection_pair_dict if it is in the keys of the list row
+			# 1. For every pair in p_selection_dict check if a key of that pair exist in list row
+			for pair_itr in range( len( p_selection_dict ) ) :
+				l_selection_dict_key   = list( p_selection_dict )[ pair_itr ]
+				l_selection_dict_value = p_selection_dict[ l_selection_dict_key ]
+				# 2. Check if key name exists in list row
+				if l_selection_dict_key in row_dict.keys() :
+					if l_selection_dict_value != row_dict[ l_selection_dict_key ] :
+						# This value is not equal to the value if same key in p_selection_dict
+						l_found = False
+					else :
+						l_found = l_found and True
+			# Select that row if it contains the values in p_selection_dict
+			if l_found :
+				self.select_item( row_itr )
+				break
 
 
 	def select_item( self, p_item_idx_int ) :
@@ -200,6 +213,12 @@ class ScrollList :
 		if p_item_idx_int < 0 : p_item_idx_int = 0
 		self.m_selected_item_int = p_item_idx_int
 		self.m_scroll_pointer_int = p_item_idx_int
+
+
+	def select_first( self ) :
+		self.m_selected_item_int = 0
+		self.m_scroll_pointer_int = 0
+
 
 	def get_selected_item( self ) :
 		if len( self.m_items_list ) > 0 :
@@ -227,8 +246,8 @@ class ScrollList :
 			if self.m_scroll_region_top_int < 0 : self.m_scroll_region_top_int = 0
 
 
-	def add_item( self, p_new_item_obj ) :
-		self.m_items_list.append( p_new_item_obj )
+	def add_item( self, p_new_item_dict ) :
+		self.m_items_list.append( p_new_item_dict )
 		if self.m_auto_scroll_bool :
 			self.m_scroll_pointer_int = len( self.m_items_list ) - 1
 			self.scroll_rel( 1 )

@@ -24,9 +24,7 @@ def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 	# Find max num of cols
 	l_num_of_fields = 0
 	for choice_row in p_choices_list[ 'choices' ] :
-		debug_info( f'length of choice_row:{ len( choice_row ) }  { choice_row }' )
 		l_num_of_fields = max( l_num_of_fields, len( choice_row ) )
-	debug_info( f'l_num_of_fields:{ l_num_of_fields }' )
 	# Build a list of column widths
 	# Start with 0 width
 	l_widest_row_int = len( p_choices_list[ 'title' ] )
@@ -34,10 +32,8 @@ def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 	l_col_width_list = [ 0 ] * l_num_of_fields #len( p_choices_list[ 'choices' ][ 0 ] )
 	# Go through all rows
 	for choice_itr, choice_row in enumerate( p_choices_list[ 'choices' ] ) :
-		#debug_info( f'{ choice_itr }, { choice_row }' )
 		# Go through all fields in a row to find widest common column width
 		for field_itr, field_val in enumerate( choice_row ) :
-			#debug_info( f'{ field_itr }, { field_val }' )
 			#if field_idx not in l_shown_cols_list : break
 			l_col_width_list[ field_itr ] = max( l_col_width_list[ field_itr ], len( str( field_val ) ) )
 		l_widest_row_int = max( l_widest_row_int, sum( l_col_width_list ) )
@@ -50,27 +46,27 @@ def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 		choice_itm_str = ''
 		if len( list( choice_row ) ) > 1 :
 			# Row contains multiple fields, concatenate them together
-			for shown_col_itr, shown_col_value in enumerate( l_shown_cols_list ) :
+			for shown_col_itr, shown_col_idx in enumerate( l_shown_cols_list ) :
 				if shown_col_itr > 0 :
 					choice_itm_str += '  '
-				if 0 <= shown_col_value < len( choice_row ) :
+				if 0 <= shown_col_idx < len( choice_row ) :
 					# Store the value
-					field_value = choice_row[ list( choice_row )[ shown_col_value ] ]
+					field_value = choice_row[ shown_col_idx ]
 					l_justify_value = l_justify_list[ shown_col_itr ]
 					match l_justify_value :
 						case 'left' :
-							choice_itm_str += str( field_value ).ljust( l_col_width_list[ shown_col_value ] )
+							choice_itm_str += str( field_value ).ljust( l_col_width_list[ shown_col_idx ] )
 						case 'right' :
-							choice_itm_str += str( field_value ).rjust( l_col_width_list[ shown_col_value ] )
+							choice_itm_str += str( field_value ).rjust( l_col_width_list[ shown_col_idx ] )
 						case 'center' :
-							choice_itm_str += str( field_value ).center( l_col_width_list[ shown_col_value ] )
+							choice_itm_str += str( field_value ).center( l_col_width_list[ shown_col_idx ] )
 			# Adjust widest width
 			l_widest_row_int = max( l_widest_row_int, len( choice_itm_str ) )
 		elif len( choice_row ) == 1 :
 			choice_itm_str += str( choice_row[ 0 ] )
 
 		# Add padding
-		l_padded_row_str = '<' + f'>{ choice_itm_str }<'.center( l_widest_row_int ) + '>'
+		l_padded_row_str = ' ' + f'{ choice_itm_str }'.center( l_widest_row_int ) + ' '
 		# Add row to list
 		l_concatenated_fields_list.append( l_padded_row_str )
 

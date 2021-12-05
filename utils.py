@@ -9,4 +9,4 @@ def debug_info( p_msg ) :
 	:return:  nothing
 	"""
 	l_caller = getframeinfo( stack()[ 1 ][ 0 ] )
-	print( f'in file "{ l_caller.filename }", at line { l_caller.lineno }:\n{ p_msg }' )
+	print( f'Debug info: in file "{ l_caller.filename }", at line { l_caller.lineno }: { p_msg }' )
