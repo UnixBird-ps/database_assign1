@@ -210,6 +210,7 @@ def get_string_from_input( p_stdscr, p_msg_str, p_input_length_max_int = 1 ) :
 		# Write the string to the screen
 		l_newwin.addstr( 0, len( p_msg_str ), l_input_str )
 		l_newwin.refresh()
+
 	# Destroy the window dialog
 	del l_newwin
 	# Hide blinking cursor

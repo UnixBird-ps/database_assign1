@@ -4,7 +4,7 @@ from setup import init_db
 from menu import get_menu_choice, get_string_from_input
 from scrolllist import ScrollList
 from utils import debug_info
-
+from dialog import dialog
 
 class App :
 
@@ -389,13 +389,34 @@ class App :
 		self.add_log( self.m_lists[ self.m_selected_list_idx ].get_name() )
 
 		# For artist
+		l_selected_arist = self.m_lists[ self.m_artists_list_idx ].get_selected_item()
 		# 1. name
 		# 2. description
-		l_dialog_dict = []
-		l_dialog_dict.append( { 'input_kind' : 'single' , 'field' : 'name',         'max_length' :  20, 'value' : '' } )
-		l_dialog_dict.append( { 'input_kind' : 'multi'  , 'field' : 'description' , 'max_length' : 250, 'value' : '' } )
-		debug_info()
-		print( l_dialog_dict )
+		l_dialog_dict = {}
+		l_dialog_dict |= { 'sizeyx' : [ 22, 70 ] }
+		l_dialog_dict |=\
+		{
+			'title' : 'Add new artist',
+			'controls' :
+			[
+				{
+					'label' : '       name: ',
+					'value' : l_selected_arist.get( 'name' ),
+					'attr'  : { 'lines' : 1 , 'max_length' :  30 }
+				},
+				{
+					'label' : 'description: ',
+					'value' : l_selected_arist.get( 'description' ),
+					'attr'  : { 'lines' : 10  , 'max_length' : 250 }
+				}
+			]
+		}
+		# debug_info()
+		# print( 'before' )
+		# print( l_dialog_dict )
+		dialog( self.m_main_curses_window, l_dialog_dict )
+		# print( 'after' )
+		# print( l_dialog_dict )
 
 		# For album
 		# 1. title
