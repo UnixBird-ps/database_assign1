@@ -79,13 +79,13 @@ def sqlite_dissect_table( p_db_file_name_str, p_table_name_str ) :
 	l_dbcon.close()
 
 
-def sqlite_run( p_db_file_name_str, p_sql_query_str ) :
+def sqlite_run( p_db_file_name_str, p_sql_query_str, p_values = () ) :
 	# Open the database file ( create if not exists )
 	l_dbcon = sqlite3.connect( p_db_file_name_str )
 	# Open a cursor to the database
 	l_cur = l_dbcon.cursor()
 	# Execute query
-	l_cur.execute( p_sql_query_str )
+	l_cur.execute( p_sql_query_str, p_values )
 	# Commit changes
 	l_dbcon.commit()
 	# Close connection
@@ -101,7 +101,7 @@ def sqlite_run( p_db_file_name_str, p_sql_query_str ) :
 	return l_db_results
 
 
-def sqlite_get( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
+def sqlite_get( p_db_file_name_str, p_sql_query_str, p_values = () ) :
 	# Open the database file ( create if not exists )
 	l_dbcon = sqlite3.connect( p_db_file_name_str )
 	l_dbcon.row_factory = sqlite3.Row

@@ -1,11 +1,11 @@
 import curses
-from dbutil import sqlite_get
+from dbutil import sqlite_get, sqlite_run
 from setup import init_db
 from menu import get_menu_choice, get_string_from_input
 from scrolllist import ScrollList
 from utils import debug_info
-from dialog import dialog
-import pprint
+import dialog
+
 
 class App :
 
@@ -39,13 +39,13 @@ class App :
 		self.m_main_curses_window.addstr( 0, 0, l_title_bar, curses.A_REVERSE )
 
 
-	def redraw_status_bar( self, p_right_justified_str ) :
+	def redraw_status_bar( self, p_status_bar_text ) :
 		# Get the size of the screen
 		l_scr_size_yx = self.m_main_curses_window.getmaxyx()
 		# Get screen width
 		l_status_bar_width = l_scr_size_yx[ 1 ] - 1 #curses.COLS
-		# Prepare a title bar with the title centered
-		l_status_bar = p_right_justified_str.rjust( l_status_bar_width )
+		# Prepare a string with the text centered
+		l_status_bar = p_status_bar_text.center( l_status_bar_width )
 		# Output the bar on first row of the screen
 		self.m_main_curses_window.addnstr( l_scr_size_yx[ 0 ] - 1, 0, l_status_bar, l_status_bar_width, curses.A_REVERSE )
 
@@ -190,6 +190,7 @@ class App :
 		FROM artists
 		'''
 		l_query_result = sqlite_get( self.m_db_file_name, l_sql_query  )
+		self.m_lists[ self.m_artists_list_idx ].empty_list()
 		for row_idx, sqlite3_row in enumerate( l_query_result[ 2 ] ) :
 			table_row_dict = {}
 			# As key use column names from l_query_result[ 0 ][ field_itr ]
@@ -383,65 +384,233 @@ class App :
 					self.m_selected_list_idx = self.m_songs_list_idx
 
 
-	def edit_dialog( self ) :
+	def add_or_edit_dialog( self, p_add_flag = False ) :
 		# Items in the log list are not editable, return
 		if self.m_selected_list_idx == self.m_songs_list_idx : return
-
-		self.add_log( self.m_lists[ self.m_selected_list_idx ].get_name() )
-
-		# For artist
-		l_selected_arist = self.m_lists[ self.m_artists_list_idx ].get_selected_item()
-		# 1. name
-		# 2. description
-		l_dialog_dict = {}
-		l_dialog_dict |= { 'sizeyx' : [ 22, 70 ] }
-		l_dialog_dict |=\
+		# For showing the dialog, start with common size and keys
+		l_common_dlg_dict = \
 		{
-			'title' : 'Add new artist',
-			'controls' :
-			[
-				{
-					'label' : '       name: ',
-					'value' : l_selected_arist.get( 'name' ),
-					'lines' : 1,
-					'max_length' :  30
-				},
-				{
-					'label' : 'description: ',
-					'value' : l_selected_arist.get( 'description' ),
-					'lines' : 10,
-					'max_length' : 250
-				}
-			]
+			'sizeyx' : [ 22, 70 ]
 		}
+		# Show different dialog depending on which list has focus
+		l_table_name = self.m_lists[ self.m_selected_list_idx ].get_name()
+		match l_table_name :
+			case 'artists' :
+				# For artist
+				# 1. name
+				# 2. description
+				# Init common vars for both edit and add dialog
+				l_dlg_title   = 'Add artist'
+				l_name        = ''
+				l_description = ''
+				# Fill vars with existing values for the edit dialog
+				l_selected_arist = self.m_lists[ self.m_artists_list_idx ].get_selected_item()
+				if not p_add_flag :
+					l_dlg_title   = 'Edit artist'
+					l_name        = ( l_name,        l_selected_arist.get( 'name'        ) )[ bool( l_selected_arist.get( 'name'        ) ) ]
+					l_description = ( l_description, l_selected_arist.get( 'description' ) )[ bool( l_selected_arist.get( 'description' ) ) ]
+				# Prepare a dict describing the dialog box
+				l_dlg_dict = l_common_dlg_dict |\
+				{
+					'title'    : l_dlg_title,
+					'controls' :\
+					[
+						{
+							'name'  : 'name',
+							'label' : '       name: ',
+							'value' : l_name,
+							'lines' : 1,
+							'max_length' :  30
+						},
+						{
+							'name'  : 'description',
+							'label' : 'description: ',
+							'value' : l_description,
+							'lines' : 10,
+							'max_length' : 250
+						}
+					]
+				}
+				# Display an edit dialog box to change the attributes of the selected artist
+				l_dialog_result = dialog.dialog( self.m_main_curses_window, l_dlg_dict )
+				# Prepare a common list of sql params
+				l_sql_params =\
+				{
+					'name'        : dialog.get_value_from_ctl_dict_list( 'name',        l_dlg_dict.get( 'controls' ) ),
+					'description' : dialog.get_value_from_ctl_dict_list( 'description', l_dlg_dict.get( 'controls' ) )
+				}
+				# Values were changed
+				if l_dialog_result[ 0 ] and l_dialog_result[ 1 ] :
+					# Prepare a sql query
+					l_sql_query =\
+					f'''
+					UPDATE
+						artists
+					SET
+						name = :name,
+						description = :description
+					WHERE
+						id = :id
+					'''
+					if not p_add_flag :
+						l_sql_params |= { 'id' : l_selected_arist.get( 'id' ) }
+					debug_info()
+					print( l_sql_params )
+					# db_result = sqlite_run( self.m_db_file_name, l_sql_query, l_sql_params )
+					# if db_result[ 1 ] > 0 :
+					# 	# Database was modified
+					# 	self.add_log( 'Saved changes to selected artist' )
+					# 	self.reload_artists()
 
-		debug_info()
-		print( 'before' )
-		for x in l_dialog_dict.get( 'controls' ) : print( x.get( 'value' ) )
+			case 'albums' :
+				# For album
+				# 1. title
+				# 2. description
+				# 3. year_released
+				# Init common vars for both edit and add dialog
+				l_dlg_title   = 'Add album'
+				l_title       = ''
+				l_description = ''
+				l_year        = ''
+				# Fill vars with existing values for the edit dialog
+				l_selected_album = self.m_lists[ self.m_albums_list_idx ].get_selected_item()
+				if not p_add_flag :
+					l_dlg_title   = 'Edit album'
+					l_title       = ( l_title,       l_selected_album.get( 'title'         ) )[ bool( l_selected_album.get( 'title'         ) ) ]
+					l_description = ( l_description, l_selected_album.get( 'description'   ) )[ bool( l_selected_album.get( 'description'   ) ) ]
+					l_year        = ( l_year,        l_selected_album.get( 'year_released' ) )[ bool( l_selected_album.get( 'year_released' ) ) ]
+				# Prep a dict describing the dialog box
+				l_dlg_dict = l_common_dlg_dict |\
+				{
+					'title'    : l_dlg_title,
+					'controls' :\
+					[
+						{
+							'name'  : l_dlg_title,
+							'label' : '      title: ',
+							'value' : l_title,
+							'lines' : 1,
+							'max_length' :  30
+						},
+						{
+							'name'  : 'description',
+							'label' : 'description: ',
+							'value' : l_description,
+							'lines' : 10,
+							'max_length' : 250
+						},
+						{
+							'name'  : 'year_released',
+							'label' : '   released: ',
+							'value' : l_year,
+							'lines' : 1,
+							'max_length' : 5
+						}
+					]
+				}
+				# Display an edit dialog that changes the values in the dict
+				l_dialog_result = dialog.dialog( self.m_main_curses_window, l_dlg_dict )
+				# Prepare a common list of sql params
+				l_sql_params =\
+				{
+					'title'         : dialog.get_value_from_ctl_dict_list( 'title',         l_dlg_dict.get( 'controls' ) ),
+					'description'   : dialog.get_value_from_ctl_dict_list( 'description',   l_dlg_dict.get( 'controls' ) ),
+					'year_released' : dialog.get_value_from_ctl_dict_list( 'year_released', l_dlg_dict.get( 'controls' ) )
+				}
+				# Values were changed
+				if l_dialog_result[ 0 ] and l_dialog_result[ 1 ] :
+					# Prepare a sql query
+					l_sql_query =\
+					f'''
+					UPDATE
+						albums
+					SET
+						title = :title,
+						description = :description,
+						year_released = :year_released
+					WHERE
+						id = :id
+					'''
+					# Add id to the params dict because we are updating an existing row
+					if not p_add_flag :
+						l_sql_params |= { 'id' : l_selected_album.get( 'id' ) }
+					# Execute sql query
+					debug_info()
+					print( l_sql_params )
+					# db_result = sqlite_run( self.m_db_file_name, l_sql_query, l_sql_params )
+					# if db_result[ 1 ] > 0 :
+					# 	# Database was modified
+					# 	self.add_log( 'Saved changes to selected album' )
+					# 	self.reload_albums_on_artist( l_selected_album.get( 'artist_id' ) )
 
-		l_changed_flag = dialog( self.m_main_curses_window, l_dialog_dict )
-
-		print( 'after' )
-		for x in l_dialog_dict.get( 'controls' ) : print( x.get( 'value' ) )
-
-		if l_changed_flag :
-			l_sql_query =\
-			'''
-			UPSERT INTO
-				artists ( name, description )
-			VALUES
-			'''
-
-		# For album
-		# 1. title
-		# 2. description
-		# 3. year_released
-		# 4. connection to selected artist_id
-
-		# For song
-		# 1. name
-		# 2. duration
-		# 3. connection to selected album_id
+			case 'songs' :
+				# For song
+				# 1. name
+				# 2. duration
+				# Init common vars for both edit and add dialog
+				l_dlg_title = 'Add song'
+				l_name      = ''
+				l_duration  = ''
+				# Fill vars with existing values for the edit dialog
+				l_selected_song = self.m_lists[ self.m_songs_list_idx ].get_selected_item()
+				if not p_add_flag :
+					l_dlg_title = 'Edit song'
+					l_name      =     ( l_name,     l_selected_song.get( 'name'       ) )[ bool( l_selected_song.get( 'name'       ) ) ]
+					l_duration  = ( l_duration, l_selected_song.get( 'duration'   ) )[ bool( l_selected_song.get( 'duration'   ) ) ]
+				# Prepare a dict describing the dialog box
+				l_dlg_dict = l_common_dlg_dict |\
+				{
+					'title'    : l_dlg_title,
+					'controls' :\
+					[
+						{
+							'name'  : 'name',
+							'label' : '    name: ',
+							'value' : l_name,
+							'lines' : 1,
+							'max_length' :  30
+						},
+						{
+							'name'  : 'duration',
+							'label' : 'duration: ',
+							'value' : l_duration,
+							'lines' : 1,
+							'max_length' : 4
+						}
+					]
+				}
+				# Display an edit dialog that changes the values in the dict
+				l_dialog_result = dialog.dialog( self.m_main_curses_window, l_dlg_dict )
+				# Prepare a common list of sql params
+				l_sql_params =\
+				{
+					'name'     : dialog.get_value_from_ctl_dict_list( 'name',     l_dlg_dict.get( 'controls' ) ),
+					'duration' : dialog.get_value_from_ctl_dict_list( "duration", l_dlg_dict.get( "controls" ) )
+				}
+				# Values were changed
+				if l_dialog_result[ 0 ] and l_dialog_result[ 1 ] :
+					# Prepare a sql query
+					l_sql_query =\
+					f'''
+					UPDATE
+						songs
+					SET
+						name = :name,
+						duration = :duration
+					WHERE
+						id = :id
+					'''
+					# Add id to the params dict because we are updating an existing row
+					if not p_add_flag :
+						l_sql_params |= { 'id' : l_selected_song.get( 'id' ) }
+					# Execute sql query
+					debug_info()
+					print( l_sql_params )
+					# db_result = sqlite_run( self.m_db_file_name, l_sql_query, l_sql_params )
+					# if db_result[ 1 ] > 0 :
+					# 	# Database was modified
+					# 	self.add_log( 'Saved changes to the selected song' )
+					# 	self.reload_songs_on_album( l_selected_song.get( 'album_id' ) )
 
 
 	def run( self, p_stdscr ) :
@@ -555,11 +724,11 @@ class App :
 					# The search dialog
 					self.search_dialog()
 				case curses.KEY_F4 :
-					self.edit_dialog()
-				case curses.KEY_F8 :
+					self.add_or_edit_dialog() # True == add
+				case curses.KEY_F7 :
 					# The Add menu
-					pass
-				case curses.CTL_DEL :
+					self.add_or_edit_dialog( True )
+				case curses.KEY_DC :
 					# The Remove menu
 					pass
 				case curses.KEY_F10 :
