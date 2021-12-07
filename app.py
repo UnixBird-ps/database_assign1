@@ -402,21 +402,23 @@ class App :
 				{
 					'label' : '       name: ',
 					'value' : l_selected_arist.get( 'name' ),
-					'attr'  : { 'lines' : 1 , 'max_length' :  30 }
+					'lines' : 1,
+					'max_length' :  30
 				},
 				{
 					'label' : 'description: ',
 					'value' : l_selected_arist.get( 'description' ),
-					'attr'  : { 'lines' : 10  , 'max_length' : 250 }
+					'lines' : 10,
+					'max_length' : 250
 				}
 			]
 		}
-		# debug_info()
-		# print( 'before' )
-		# print( l_dialog_dict )
+		debug_info()
+		print( 'before' )
+		for x in l_dialog_dict.get( 'controls' ) : print( x.get( 'value' ) )
 		dialog( self.m_main_curses_window, l_dialog_dict )
-		# print( 'after' )
-		# print( l_dialog_dict )
+		print( 'after' )
+		for x in l_dialog_dict.get( 'controls' ) : print( x.get( 'value' ) )
 
 		# For album
 		# 1. title
