@@ -5,6 +5,7 @@ from menu import get_menu_choice, get_string_from_input
 from scrolllist import ScrollList
 from utils import debug_info
 from dialog import dialog
+import pprint
 
 class App :
 
@@ -413,12 +414,23 @@ class App :
 				}
 			]
 		}
+
 		debug_info()
 		print( 'before' )
 		for x in l_dialog_dict.get( 'controls' ) : print( x.get( 'value' ) )
-		dialog( self.m_main_curses_window, l_dialog_dict )
+
+		l_changed_flag = dialog( self.m_main_curses_window, l_dialog_dict )
+
 		print( 'after' )
 		for x in l_dialog_dict.get( 'controls' ) : print( x.get( 'value' ) )
+
+		if l_changed_flag :
+			l_sql_query =\
+			'''
+			UPSERT INTO
+				artists ( name, description )
+			VALUES
+			'''
 
 		# For album
 		# 1. title
