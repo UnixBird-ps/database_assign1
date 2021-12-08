@@ -121,7 +121,7 @@ def dialog( p_curses_window_obj, p_org_dlg_dict = None ) :
 		l_current_ctl_wnd = l_ctl_wnds_list[ l_current_ctl_idx ]
 
 		# Write the value to window
-		l_current_ctl_wnd.addnstr( 0, 0, str( l_current_ctl_dict.get( 'value' ) ) + ' ', 1 + l_current_ctl_dict.get( 'max_length' ), curses.color_pair( 0 ) )
+		l_current_ctl_wnd.addnstr( 0, 0, str( l_current_ctl_dict.get( 'value' ) ) + ' ', 1 + l_current_ctl_dict.get( 'max_length' ), curses.color_pair( 1 ) )
 
 		# Move cursor to the control that has focus
 		l_current_ctl_dict.get( "cursor_yx" )[ 0 ] = int( l_current_ctl_dict[ 'caret_pos' ] / l_current_ctl_dict[ 'rect' ][ 'w' ] )
