@@ -8,10 +8,9 @@ def init_db( p_db_file_name_str ) :
 			p_db_file_name_str,
 			'artists',
 			'''
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 			name VARCHAR ( 100 ) NOT NULL,
-			description VARCHAR ( 250 ) NOT NULL,
-			UNIQUE ( name, description )
+			description VARCHAR ( 500 ) NOT NULL
 			'''
 		)
 		print( 'Table "artists" was ' + ( 'not', '' )[db_result] + 'created.' )
@@ -23,13 +22,12 @@ def init_db( p_db_file_name_str ) :
 			p_db_file_name_str,
 			'albums',
 			'''
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 			title VARCHAR ( 100 ) NOT NULL,
-			description VARCHAR ( 250 ) NOT NULL,
+			description VARCHAR ( 500 ) NOT NULL,
 			year_released INTEGER,
 			artist_id INTEGER NOT NULL,
-			FOREIGN KEY ( artist_id ) REFERENCES artists ( id ) ON DELETE CASCADE,
-			UNIQUE ( title, description, artist_id )
+			FOREIGN KEY ( artist_id ) REFERENCES artists ( id ) ON DELETE CASCADE
 			'''
 		)
 		print( 'Table "albums" was', ( 'not', '' )[db_result] + 'created.' )
@@ -41,7 +39,7 @@ def init_db( p_db_file_name_str ) :
 			p_db_file_name_str,
 			'songs',
 			'''
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 			name VARCHAR ( 100 ) NOT NULL,
 			duration INTEGER NOT NULL,
 			album_id INTEGER,

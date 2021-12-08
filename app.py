@@ -446,7 +446,7 @@ class App :
 							'label' : 'description: ',
 							'value' : l_description,
 							'lines' : 10,
-							'max_length' : 250
+							'max_length' : 500
 						}
 					]
 				}
@@ -538,7 +538,7 @@ class App :
 							'label' : 'description: ',
 							'value' : l_description,
 							'lines' : 10,
-							'max_length' : 250
+							'max_length' : 500
 						},
 						{
 							'name'  : 'year_released',
@@ -691,7 +691,49 @@ class App :
 
 
 
+	def remove_menu( self ) :
+		l_remove_menu_choices =\
+		{
+			'choices' :
+			[
+				[ 'No' ],
+				[ 'Yes' ]
+			],
+			'title' : ''
+		}
+		l_selected_list = self.m_lists[ self.m_selected_list_idx ]
+		if l_selected_list is None :
+			return
+		l_selected_list_name = l_selected_list.get_name()
+		# Show different dialog depending on which list has focus
+		l_sql_query = ''
+		match l_selected_list_name :
+			case 'artists' :
+				# For artist
+				l_selected_item  = l_selected_list.get_selected_item()
+				if l_selected_item is not None :
+					l_remove_menu_choices[ 'title' ] = f'''Really remove the artist: "{ l_selected_item.get( 'name' ) }"? All albums and related songs will also be removed.'''
+					l_sql_query = l_selected_item.get( 'name' )
+			case 'albums' :
+				# For album
+				l_selected_item  = l_selected_list.get_selected_item()
+				if l_selected_item is not None :
+					l_remove_menu_choices[ 'title' ] = f'''Really remove the album: "{ l_selected_item.get( 'title' ) }"? All related songs will also be removed.'''
+					l_sql_query = l_selected_item.get( 'title' )
+			case 'songs' :
+				# For song
+				l_selected_item  = l_selected_list.get_selected_item()
+				if l_selected_item is not None :
+					l_remove_menu_choices[ 'title' ] = f'''Really remove the song: "{ l_selected_item.get( 'name' ) }"?'''
+					l_sql_query = l_selected_item.get( 'name' )
+		l_quit_menu_choice = get_menu_choice( self.m_main_curses_window, l_remove_menu_choices )
+		debug_info()
+		print( l_sql_query )
+		print( l_quit_menu_choice )
+
 	def run( self, p_stdscr ) :
+
+
 		self.m_main_curses_window = p_stdscr
 
 		# Hide blinking cursor
@@ -727,16 +769,19 @@ class App :
 		self.add_log( f'Welcome to { self.m_app_title } { self.m_app_version }.' )
 		# Populate UI lists with data from database
 		self.reload_artists()
-		# Select first album of that artist
 		self.m_lists[ self.m_artists_list_idx ].select_first()
-		# Reload albums that belong to this artist
-		self.reload_albums_on_artist( self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'id' ) )
-		# Select first album of that artist
-		self.m_lists[ self.m_albums_list_idx ].select_first()
-		# Reload songs that belong to this album
-		self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
-		# # Select first song of that album
-		self.m_lists[ self.m_songs_list_idx ].select_first()
+		l_selected_artist = self.m_lists[ self.m_artists_list_idx ].get_selected_item()
+		if l_selected_artist is not None :
+			# Reload albums that belong to this artist
+			self.reload_albums_on_artist( l_selected_artist.get( 'id' ) )
+			# Select first album of that artist
+			self.m_lists[ self.m_albums_list_idx ].select_first()
+			l_selected_album = self.m_lists[ self.m_albums_list_idx ].get_selected_item()
+			if l_selected_album is not None :
+				# Reload songs that belong to this album
+				self.reload_songs_on_album( l_selected_album.get( 'id' ) )
+				# # Select first song of that album
+				self.m_lists[ self.m_songs_list_idx ].select_first()
 
 		# Create menus
 		# l_delete_menu_choices =\
@@ -807,9 +852,9 @@ class App :
 				case curses.KEY_F7 :
 					# The Add menu
 					self.add_or_edit_dialog( True )
-				case curses.KEY_DC :
+				case curses.KEY_F8 :
 					# The Remove menu
-					pass
+					self.remove_menu()
 				case curses.KEY_F10 :
 					# The quit dialog
 					self.redraw_main_bars()

@@ -4,8 +4,6 @@ from os import isatty, system
 from time import strftime
 
 
-
-# Run only when started as standalone
 # This prevents running the code when loading
 if __name__ == '__main__':
 	app = App()
