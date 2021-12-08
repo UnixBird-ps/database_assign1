@@ -119,7 +119,7 @@ def sqlite_run_v2( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
 	l_dbcon.close()
 	l_cur_description = []
 	if l_cur.description :
-		for i_col in l_cur.description : l_cur_description.append( i_col[ 0 ] )
+		for col_desc in l_cur.description : l_cur_description.append( col_desc[ 0 ] )
 	# Return a list containing names of columns, number of rows affected
 	l_db_results = {}
 	l_db_results |= { 'description' : l_cur_description }
