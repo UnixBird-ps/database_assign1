@@ -4,6 +4,7 @@ import curses.ascii
 from utils import debug_info
 
 
+
 def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 	l_selected_int = 0
 	l_shown_cols_list = [ 1 ] #range( len( p_choices_list[ 'choices' ][ 0 ] ) )
@@ -156,6 +157,7 @@ def get_menu_choice( p_stdscr, p_choices_list, p_options = None ) :
 	del l_newwin
 	# Return choice id to caller
 	return l_selected_int
+
 
 
 def get_string_from_input( p_stdscr, p_msg_str, p_input_length_max_int = 1 ) :

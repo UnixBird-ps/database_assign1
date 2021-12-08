@@ -1,6 +1,7 @@
 import sqlite3
 
 
+
 def sqlite_check_table( p_db_file_name_str, p_table_name_str ) :
 	l_sql_query_str =\
 	f'''
@@ -28,6 +29,7 @@ def sqlite_check_table( p_db_file_name_str, p_table_name_str ) :
 	return False
 
 
+
 def	sqlite_create_table( p_db_file_name_str, p_table_name_str, p_field_defs_str ) :
 	l_sql_query_str =\
 	f'''
@@ -49,6 +51,7 @@ def	sqlite_create_table( p_db_file_name_str, p_table_name_str, p_field_defs_str 
 	# Close connection
 	l_dbcon.close()
 	return sqlite_check_table( p_db_file_name_str, p_table_name_str )
+
 
 
 def sqlite_dissect_table( p_db_file_name_str, p_table_name_str ) :
@@ -79,7 +82,8 @@ def sqlite_dissect_table( p_db_file_name_str, p_table_name_str ) :
 	l_dbcon.close()
 
 
-def sqlite_run( p_db_file_name_str, p_sql_query_str, p_values = () ) :
+
+def sqlite_run( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
 	# Open the database file ( create if not exists )
 	l_dbcon = sqlite3.connect( p_db_file_name_str )
 	# Open a cursor to the database
@@ -98,10 +102,35 @@ def sqlite_run( p_db_file_name_str, p_sql_query_str, p_values = () ) :
 	l_db_results.append( l_cur_description )
 	l_db_results.append( l_cur.rowcount )
 	l_db_results.append( [] )
+	l_db_results.append( l_cur.lastrowid )
 	return l_db_results
 
 
-def sqlite_get( p_db_file_name_str, p_sql_query_str, p_values = () ) :
+def sqlite_run_v2( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
+	# Open the database file ( create if not exists )
+	l_dbcon = sqlite3.connect( p_db_file_name_str )
+	# Open a cursor to the database
+	l_cur = l_dbcon.cursor()
+	# Execute query
+	l_cur.execute( p_sql_query_str, p_values )
+	# Commit changes
+	l_dbcon.commit()
+	# Close connection
+	l_dbcon.close()
+	l_cur_description = []
+	if l_cur.description :
+		for i_col in l_cur.description : l_cur_description.append( i_col[ 0 ] )
+	# Return a list containing names of columns, number of rows affected
+	l_db_results = {}
+	l_db_results |= { 'description' : l_cur_description }
+	l_db_results |= { 'rowcount' : l_cur.rowcount }
+	l_db_results |= { 'rows' : [] }
+	l_db_results |= { 'lastrowid' : l_cur.lastrowid }
+	return l_db_results
+
+
+
+def sqlite_get( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
 	# Open the database file ( create if not exists )
 	l_dbcon = sqlite3.connect( p_db_file_name_str )
 	l_dbcon.row_factory = sqlite3.Row
@@ -123,6 +152,32 @@ def sqlite_get( p_db_file_name_str, p_sql_query_str, p_values = () ) :
 	l_db_results.append( l_db_rows )
 	# Return results to the caller
 	return l_db_results
+
+
+def sqlite_get_v2( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
+	# Open the database file ( create if not exists )
+	l_dbcon = sqlite3.connect( p_db_file_name_str )
+	l_dbcon.row_factory = sqlite3.Row
+	# Open a cursor to the database
+	l_cur = l_dbcon.cursor()
+	# Execute query
+	l_cur.execute( p_sql_query_str, p_values )
+	# Get rows
+	l_db_rows = l_cur.fetchall()
+	# Close connection
+	l_dbcon.close()
+	# Create a list containing three lists, a list of column names, number of rows returned, and a list of data rows
+	l_cur_description = []
+	if l_cur.description :
+		for b_col in l_cur.description : l_cur_description.append( b_col[ 0 ] )
+	l_db_results = {}
+	l_db_results |= { 'description' : l_cur_description }
+	l_db_results |= { 'rowcount' : l_cur.rowcount }
+	l_db_results |= { 'rows' : l_db_rows }
+	l_db_results |= { 'lastrowid' : l_cur.lastrowid }
+	# Return results to the caller
+	return l_db_results
+
 
 
 def sqlite_get_pretty( p_db_file_name_str, p_sql_query_str, p_values = {} ) :

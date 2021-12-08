@@ -4,6 +4,7 @@ from curses.textpad import rectangle
 from utils import debug_info
 
 
+
 def dialog( p_curses_window_obj, p_org_dlg_dict = None ) :
 	if p_org_dlg_dict is None : return
 
@@ -25,13 +26,13 @@ def dialog( p_curses_window_obj, p_org_dlg_dict = None ) :
 	# Write text at the bottom of screen the key/command pairs
 	l_status_bar_text = ''
 	for itr, key_attr_dict in enumerate( l_keys_dict.values() ) :
+		# Start adding gaps after first element
 		if itr > 0 :
 			l_status_bar_text += '   '
-		#l_status_bar_text += f'{ key_in_dlg_dict.get( list( key_in_dlg_dict )[ 0 ] ) }:{ key_in_dlg_dict.get( list( key_in_dlg_dict )[ 0 ] ) }'
 		l_status_bar_text += f'{ key_attr_dict.get( "key_desc" ) }:{ key_attr_dict.get( "cmd" ) }'
 	# Make it centered, but cut last character to prevent an exception
 	l_status_bar_text = l_status_bar_text.center( l_scr_size_yx[ 1 ] - 1 )
-	# Output the bar on first row of the screen
+	# Output the bar on last row of the screen
 	p_curses_window_obj.addnstr( l_scr_size_yx[ 0 ] - 1, 0, l_status_bar_text, l_scr_size_yx[ 1 ], curses.A_REVERSE )
 
 	l_dlg_size_yx = p_org_dlg_dict.get( 'sizeyx' )
@@ -64,7 +65,7 @@ def dialog( p_curses_window_obj, p_org_dlg_dict = None ) :
 		# Append new attribute to the new dict
 		l_new_ctl_dict |= { 'label' : org_ctl_dict.get( 'label' ) }
 		l_new_ctl_dict |= { 'max_length' : org_ctl_dict.get( 'max_length' ) }
-		l_new_ctl_dict |= { 'value' : org_ctl_dict.get( 'value' ) }
+		l_new_ctl_dict |= { 'value' : str( org_ctl_dict.get( 'value' ) ) }
 		l_new_ctl_dict |= { 'pos_yx' : ( l_ctl_height_aggr, len( org_ctl_dict.get( 'label' ) ) + 1 ) }
 		l_new_ctl_dict |= { 'caret_pos' : 0 }
 		l_new_ctl_dict |= { 'cursor_yx' : [ 0, 0 ] }
@@ -182,7 +183,6 @@ def dialog( p_curses_window_obj, p_org_dlg_dict = None ) :
 						l_current_ctl_dict[ 'value' ] = l_value_left_part + l_char + l_value_right_part
 						l_current_ctl_dict[ 'caret_pos' ] += 1
 
-
 	# Destroy the windows of the controls
 	for o in reversed( l_ctl_wnds_list  ):
 		if o is not None : del o
@@ -201,6 +201,7 @@ def dialog( p_curses_window_obj, p_org_dlg_dict = None ) :
 
 	# Return a flag indicating that values should be saved
 	return l_changed_flag, l_return_value
+
 
 
 def get_value_from_ctl_dict_list( p_ctl_name, p_ctl_dict_list ) :

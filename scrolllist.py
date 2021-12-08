@@ -3,6 +3,7 @@ from curses.textpad import rectangle
 from utils import debug_info
 
 
+
 class ScrollList :
 
 	def __init__( self, p_parent_window_obj, p_name, p_editable_bool, p_lines_int, p_cols_int, p_top_int, p_left_int, p_auto_scroll_bool, p_disabled_keys = None ) :
@@ -78,13 +79,16 @@ class ScrollList :
 		#self.m_curses_win_obj.idlok( 1 )
 
 
+
 	def get_name( self ) :
 		return self.m_name
+
 
 
 	def create_window( self, p_parent ) :
 		self.m_curses_win_parent_obj = p_parent
 		self.m_curses_win_obj = p_parent.subwin( self.m_inner_lines_int + 1, self.m_inner_cols_int + 1, self.m_top_int + 1, self.m_left_int + 1 )
+
 
 
 	def redraw_list( self, p_has_focus_bool, p_options = None ) :
@@ -182,11 +186,13 @@ class ScrollList :
 		self.m_curses_win_obj.refresh()
 
 
+
 	def select_item_pointed( self ) :
 		if len( self.m_items_list ) > 0 and self.m_scroll_pointer_int != self.m_selected_item_int :
 			self.m_selected_item_int = self.m_scroll_pointer_int
 			return True
 		else : return False
+
 
 
 	def select_item_on_dict( self, p_selection_dict ) :
@@ -212,6 +218,7 @@ class ScrollList :
 				break
 
 
+
 	def select_item( self, p_item_idx_int ) :
 		if p_item_idx_int > len( self.m_items_list ) - 1 : p_item_idx_int = len( self.m_items_list ) - 1
 		if p_item_idx_int < 0 : p_item_idx_int = 0
@@ -219,15 +226,18 @@ class ScrollList :
 		self.m_scroll_pointer_int = p_item_idx_int
 
 
+
 	def select_first( self ) :
 		self.m_selected_item_int = 0
 		self.m_scroll_pointer_int = 0
+
 
 
 	def get_selected_item( self ) :
 		if len( self.m_items_list ) > 0 :
 			return self.m_items_list[ self.m_selected_item_int ]
 		else : return None
+
 
 
 	def scroll_rel( self, p_rel_pos_int  ) :
@@ -250,11 +260,13 @@ class ScrollList :
 			if self.m_scroll_region_top_int < 0 : self.m_scroll_region_top_int = 0
 
 
+
 	def add_item( self, p_new_item_dict ) :
 		self.m_items_list.append( p_new_item_dict )
 		if self.m_auto_scroll_bool :
 			self.m_scroll_pointer_int = len( self.m_items_list ) - 1
 			self.scroll_rel( 1 )
+
 
 
 	def empty_list( self ) :
