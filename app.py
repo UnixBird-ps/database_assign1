@@ -1,9 +1,10 @@
 import curses
-from dbutil import sqlite_get
+from dbutil import sqlite_get, sqlite_run, sqlite_get_v2, sqlite_run_v2
 from setup import init_db
 from menu import get_menu_choice, get_string_from_input
 from scrolllist import ScrollList
 from utils import debug_info
+import dialog
 
 
 class App :
@@ -17,14 +18,19 @@ class App :
 		self.m_artists_list_idx = 0
 		self.m_albums_list_idx = 1
 		self.m_songs_list_idx = 2
+		self.m_artists_list = None
+		self.m_albums_list = None
+		self.m_songs_list = None
 		self.m_log_list_idx = 3
 		self.m_main_curses_window = None
 		self.m_artist_num_songs = 0
 		self.m_artist_num_albums = 0
 
 
+
 	def add_log( self, p_msg ) :
 		self.m_lists[ self.m_log_list_idx ].add_item( { 'msg' : p_msg } )
+
 
 
 	def redraw_title_bar( self ) :
@@ -38,20 +44,23 @@ class App :
 		self.m_main_curses_window.addstr( 0, 0, l_title_bar, curses.A_REVERSE )
 
 
-	def redraw_status_bar( self, p_right_justified_str ) :
+
+	def redraw_status_bar( self, p_status_bar_text ) :
 		# Get the size of the screen
 		l_scr_size_yx = self.m_main_curses_window.getmaxyx()
-		# Get screen width
-		l_status_bar_width = l_scr_size_yx[ 1 ] - 1 #curses.COLS
-		# Prepare a title bar with the title centered
-		l_status_bar = p_right_justified_str.rjust( l_status_bar_width )
-		# Output the bar on first row of the screen
+		# Get valid status bar width
+		l_status_bar_width = l_scr_size_yx[ 1 ] - 1
+		# Prepare a string with the text centered
+		l_status_bar = p_status_bar_text.center( l_status_bar_width )
+		# Output the bar on last row of the screen
 		self.m_main_curses_window.addnstr( l_scr_size_yx[ 0 ] - 1, 0, l_status_bar, l_status_bar_width, curses.A_REVERSE )
+
 
 
 	def redraw_main_bars( self ) :
 		self.redraw_title_bar()
-		self.redraw_status_bar( ' F1:Features   ↑/↓:Scroll   ENTER:Activate   TAB:Switch List   F3:Search   F4:Edit   F7:Add   F8:Remove   F10:Quit ' )
+		self.redraw_status_bar( 'F1:Features   ↑/↓:Scroll   ENTER:Activate   TAB:Switch List   F3:Search   F4:Edit   F7:Add   F8:Remove   F10:Quit' )
+
 
 
 	def redraw_main_screen( self ) :
@@ -60,7 +69,7 @@ class App :
 		for list_idx, list_obj in enumerate( self.m_lists ) :
 			l_selected_bool = list_idx == self.m_selected_list_idx
 			if list_idx == self.m_artists_list_idx : list_obj.redraw_list( l_selected_bool, { 'shown_cols_list' : [ 1 ], 'justify_list' : [ 'left' ] } )
-			elif list_idx == self.m_albums_list_idx : list_obj.redraw_list( l_selected_bool,  { 'shown_cols_list' : [ 1, 3 ], 'justify_list' : [ 'left', 'right' ] } )
+			elif list_idx == self.m_albums_list_idx : list_obj.redraw_list( l_selected_bool,  { 'shown_cols_list' : [ 1, 3, 5, 6 ], 'justify_list' : [ 'left', 'right', 'right', 'right' ] } )
 			elif list_idx == self.m_songs_list_idx : list_obj.redraw_list( l_selected_bool,  { 'shown_cols_list' : [ 1, 2 ], 'justify_list' : [ 'left', 'right' ] } )
 			elif list_idx == self.m_log_list_idx : list_obj.redraw_list( l_selected_bool,  { 'shown_cols_list' : [ 0 ], 'justify_list' : [ 'left' ] } )
 
@@ -81,6 +90,7 @@ class App :
 			self.m_main_curses_window.addnstr( self.m_lists[ self.m_log_list_idx ].m_top_int + 5, 2, f'albums(artist): { self.m_artist_num_albums }', self.m_lists[ 0 ].m_cols_int - 2 )
 		# except :
 		# 	pass
+
 
 
 	def features_dialog( self ) :
@@ -181,14 +191,17 @@ class App :
 		return l_features_menu_choice
 
 
+
 	def reload_artists( self ) :
-		self.add_log( 'Loading in "Artists".' )
 		l_sql_query =\
 		'''
 		SELECT *
 		FROM artists
 		'''
 		l_query_result = sqlite_get( self.m_db_file_name, l_sql_query  )
+		self.m_lists[ self.m_artists_list_idx ].empty_list()
+		self.m_lists[ self.m_albums_list_idx ].empty_list()
+		self.m_lists[ self.m_songs_list_idx ].empty_list()
 		for row_idx, sqlite3_row in enumerate( l_query_result[ 2 ] ) :
 			table_row_dict = {}
 			# As key use column names from l_query_result[ 0 ][ field_itr ]
@@ -197,8 +210,8 @@ class App :
 			self.m_lists[ self.m_artists_list_idx ].add_item( table_row_dict )
 
 
+
 	def reload_albums_on_artist( self, p_artist_id ) :
-		self.add_log( 'Loading in "Albums".' )
 		# Get artist's total number of songs.
 		l_sql_query =\
 		'''
@@ -211,17 +224,24 @@ class App :
 		l_query_result = sqlite_get( self.m_db_file_name, l_sql_query, { 'artist_id' : f'{ p_artist_id }' } )
 		if not l_query_result is None :
 			self.m_artist_num_songs = l_query_result[ 2 ][ 0 ][ 0 ]
-
 		# Get all artists
+		# '''SELECT *
+		# FROM albums
+		# WHERE albums.artist_id = :artist_id
+		# '''
 		l_sql_query =\
 		'''
-		SELECT *
+		SELECT albums.*, sum( duration ) AS length, count( songs.id ) AS songs
 		FROM albums
+		LEFT JOIN songs
+		ON albums.id = songs.album_id
 		WHERE albums.artist_id = :artist_id
+		GROUP BY albums.id
 		'''
 		l_query_result = sqlite_get( self.m_db_file_name, l_sql_query, { 'artist_id' : f'{ p_artist_id }' } )
 		self.m_artist_num_albums = len( l_query_result[ 2 ] )
 		self.m_lists[ self.m_albums_list_idx ].empty_list()
+		self.m_lists[ self.m_songs_list_idx ].empty_list()
 		for row_idx, sqlite3_row in enumerate( l_query_result[ 2 ] ) :
 			table_row_dict = {}
 			# As key use column names from l_query_result[ 0 ][ field_itr ]
@@ -230,14 +250,16 @@ class App :
 			self.m_lists[ self.m_albums_list_idx ].add_item( table_row_dict )
 
 
+
 	def reload_songs_on_album( self, p_album_id ) :
-		self.add_log( 'Loading in "Songs".' )
 		l_sql_query =\
 		"""
-		SELECT songs.id, songs.name, CAST( songs.duration / 60 AS STRING ) || ':' || PRINTF( '%02d', songs.duration % 60 ) AS duration
+		SELECT songs.id, songs.name, songs.duration
 		FROM songs
 		WHERE songs.album_id = :album_id
 		"""
+		# Alternative for showing duration as M:S
+		# """SELECT songs.id, songs.name, CAST( songs.duration / 60 AS STRING ) || ':' || PRINTF( '%02d', songs.duration % 60 ) AS duration"""
 		l_query_result = sqlite_get( self.m_db_file_name, l_sql_query, { 'album_id' : f'{ p_album_id }' } )
 		self.m_lists[ self.m_songs_list_idx ].empty_list()
 		for row_idx, sqlite3_row in enumerate( l_query_result[ 2 ] ) :
@@ -246,6 +268,7 @@ class App :
 			for field_itr, field_val in enumerate( sqlite3_row ) :
 				table_row_dict |= { l_query_result[ 0 ][ field_itr ] : field_val }
 			self.m_lists[ self.m_songs_list_idx ].add_item( table_row_dict )
+
 
 
 	def search_dialog( self ) :
@@ -343,15 +366,17 @@ class App :
 					self.m_lists[ self.m_artists_list_idx ].select_item_on_dict( { 'id' : l_item_to_goto.get( 'table_row' ).get( 'id' ) } )
 					# Reload albums that belongs to this artist
 					self.reload_albums_on_artist( l_item_to_goto.get( 'table_row' ).get( 'id' ) )
-					# Select first album of that artist
+					# Select first album in the albums list
 					self.m_lists[ self.m_albums_list_idx ].select_first()
-					# Reload songs that belong to this album
-					l_album_id = self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' )
-					self.reload_songs_on_album( l_album_id )
-					# Select first song of that album
-					self.m_lists[ self.m_songs_list_idx ].select_first()
-					# Switch current list to artists
-					self.m_selected_list_idx = self.m_artists_list_idx
+					l_selected_album = self.m_lists[ self.m_albums_list_idx ].get_selected_item()
+					if l_selected_album is not None :
+						# Reload songs that belong to this album
+						l_album_id = self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' )
+						self.reload_songs_on_album( l_album_id )
+						# Select first song of that album
+						self.m_lists[ self.m_songs_list_idx ].select_first()
+						# Switch current list to artists
+						self.m_selected_list_idx = self.m_artists_list_idx
 				case 'albums' :
 					# Found item is an album
 					# Select the artist that owns this album
@@ -382,6 +407,397 @@ class App :
 					self.m_selected_list_idx = self.m_songs_list_idx
 
 
+
+	def add_or_edit_dialog( self, p_add_flag = False ) :
+		# For showing the dialog, start with common size
+		l_common_dlg_dict = \
+		{
+			'sizeyx' : [ 22, 70 ]
+		}
+		# Show different dialog depending on which list has focus
+		l_table_name = self.m_lists[ self.m_selected_list_idx ].get_name()
+		match l_table_name :
+			case 'artists' :
+				# For artist
+				# 1. name
+				# 2. description
+				# Init common vars for both edit and add dialog
+				l_dlg_title   = ' artist'
+				l_name        = ''
+				l_description = ''
+				# Fill vars with existing values for the edit dialog
+				l_selected_artist = self.m_lists[ self.m_artists_list_idx ].get_selected_item()
+				if p_add_flag :
+					l_dlg_title   = 'Add' + l_dlg_title
+				else :
+					# Exit if selection requirements are not met
+					if l_selected_artist is None :
+						return
+					l_dlg_title   = 'Edit' + l_dlg_title
+					l_name        = ( l_name,        l_selected_artist.get( 'name'        ) )[ bool( l_selected_artist.get( 'name'        ) ) ]
+					l_description = ( l_description, l_selected_artist.get( 'description' ) )[ bool( l_selected_artist.get( 'description' ) ) ]
+				# Prepare a dict describing the dialog box
+				l_dlg_dict = l_common_dlg_dict |\
+				{
+					'title'    : l_dlg_title,
+					'controls' :\
+					[
+						{
+							'name'  : 'name',
+							'label' : '       name: ',
+							'value' : l_name,
+							'lines' : 1,
+							'max_length' :  50
+						},
+						{
+							'name'  : 'description',
+							'label' : 'description: ',
+							'value' : l_description,
+							'lines' : 10,
+							'max_length' : 500
+						}
+					]
+				}
+				# Display an edit dialog box to change the values in the dict
+				l_dialog_result = dialog.dialog( self.m_main_curses_window, l_dlg_dict )
+				# Prepare a common list of sql params
+				l_sql_params =\
+				{
+					'name'        : dialog.get_value_from_ctl_dict_list( 'name',        l_dlg_dict.get( 'controls' ) ),
+					'description' : dialog.get_value_from_ctl_dict_list( 'description', l_dlg_dict.get( 'controls' ) )
+				}
+				# Values were changed
+				if l_dialog_result[ 0 ] and l_dialog_result[ 1 ] :
+					# Prepare a sql query
+					l_sql_query = ''
+					if p_add_flag :
+						# Prepare a sql query for adding new artist
+						l_sql_query =\
+						f'''
+						INSERT INTO
+							artists ( name, description )
+						VALUES
+							( :name, :description )
+						'''
+					else :
+						# Prepare a sql query for editting existing artist
+						l_sql_query =\
+						f'''
+						UPDATE
+							artists
+						SET
+							name = :name,
+							description = :description
+						WHERE
+							id = :id
+						'''
+						# Add id to the params dict because we are updating an existing row
+						l_sql_params |= { 'id' : l_selected_artist.get( 'id' ) }
+					# Execute sql query
+					db_result = sqlite_run( self.m_db_file_name, l_sql_query, l_sql_params )
+					if db_result[ 1 ] > 0 :
+						# Database was modified
+						if p_add_flag :
+							self.add_log( 'Added new artist.' )
+						else :
+							self.add_log( 'Saved changes of the selected artist.' )
+						self.reload_artists()
+
+			case 'albums' :
+				# For album
+				# 1. title
+				# 2. description
+				# 3. year_released
+				# Init common vars for both edit and add dialogs
+				l_dlg_title   = ' album'
+				l_title       = ''
+				l_description = ''
+				l_year        = ''
+				# Exit if selection requirements are not met
+				l_selected_artist = self.m_lists[ self.m_artists_list_idx ].get_selected_item()
+				if l_selected_artist is None :
+					return
+				l_selected_album = self.m_lists[ self.m_albums_list_idx ].get_selected_item()
+				# Fill vars with existing values for the edit dialog
+				if p_add_flag :
+					l_dlg_title   = 'Add' + l_dlg_title
+				else :
+					if l_selected_album is None :
+						return
+					l_dlg_title   = 'Edit' + l_dlg_title
+					l_title       = ( l_title,       l_selected_album.get( 'title'         ) )[ bool( l_selected_album.get( 'title'         ) ) ]
+					l_description = ( l_description, l_selected_album.get( 'description'   ) )[ bool( l_selected_album.get( 'description'   ) ) ]
+					l_year        = ( l_year,        l_selected_album.get( 'year_released' ) )[ bool( l_selected_album.get( 'year_released' ) ) ]
+				# Prep a dict describing the dialog box
+				l_dlg_dict = l_common_dlg_dict |\
+				{
+					'title'    : l_dlg_title,
+					'controls' :\
+					[
+						{
+							'name'  : 'title',
+							'label' : '      title: ',
+							'value' : l_title,
+							'lines' : 1,
+							'max_length' :  50
+						},
+						{
+							'name'  : 'description',
+							'label' : 'description: ',
+							'value' : l_description,
+							'lines' : 10,
+							'max_length' : 500
+						},
+						{
+							'name'  : 'year_released',
+							'label' : '   released: ',
+							'value' : l_year,
+							'lines' : 1,
+							'max_length' : 5
+						}
+					]
+				}
+				# Display a dialog that changes the values in the dict
+				l_dialog_result = dialog.dialog( self.m_main_curses_window, l_dlg_dict )
+				# Prepare a common list of sql params
+				l_sql_params =\
+				{
+					'title'         : dialog.get_value_from_ctl_dict_list( 'title',         l_dlg_dict.get( 'controls' ) ),
+					'description'   : dialog.get_value_from_ctl_dict_list( 'description',   l_dlg_dict.get( 'controls' ) ),
+					'year_released' : dialog.get_value_from_ctl_dict_list( 'year_released', l_dlg_dict.get( 'controls' ) ),
+				}
+				# Values were changed
+				if l_dialog_result[ 0 ] and l_dialog_result[ 1 ] :
+					# Prepare a sql query
+					l_sql_query = ''
+					if p_add_flag :
+						# Prepare a sql query for adding new artist
+						l_sql_query =\
+						f'''
+						INSERT INTO
+							albums ( title, description, year_released, artist_id )
+						VALUES
+							( :title, :description, :year_released, :artist_id ) 
+						'''
+						# Add artist_id to the params dict because we are adding a new album
+						l_sql_params |= { 'artist_id'     : l_selected_artist.get( 'id' ) }
+					else :
+						l_sql_query =\
+						f'''
+						UPDATE
+							albums
+						SET
+							title = :title,
+							description = :description,
+							year_released = :year_released
+						WHERE
+							id = :id
+						'''
+						# Add id to the params dict because we are updating an existing row
+						l_sql_params |= { 'id' : l_selected_album.get( 'id' ) }
+					# Execute sql query
+					db_result = sqlite_run( self.m_db_file_name, l_sql_query, l_sql_params )
+					if db_result[ 1 ] > 0 :
+						# Database was modified
+						if p_add_flag :
+							self.add_log( 'Added new album.' )
+						else :
+							self.add_log( 'Saved changes of the selected album.' )
+						self.reload_albums_on_artist( l_selected_artist.get( 'id' ) )
+
+			case 'songs' :
+				# For song
+				# 1. name
+				# 2. duration
+				# Init common vars for both edit and add dialog
+				l_dlg_title = ' song'
+				l_name      = ''
+				l_duration  = ''
+				l_selected_album = self.m_lists[ self.m_albums_list_idx ].get_selected_item()
+				# Exit if selection requirements are not met
+				if l_selected_album is None :
+					return
+				l_selected_song = self.m_lists[ self.m_songs_list_idx ].get_selected_item()
+				# Fill vars with existing values for the edit dialog
+				if p_add_flag :
+					l_dlg_title = 'Add' + l_dlg_title
+				else :
+					if l_selected_song is None :
+						return
+					l_dlg_title = 'Edit' + l_dlg_title
+					l_name      = ( l_name,     l_selected_song.get( 'name'       ) )[ bool( l_selected_song.get( 'name'       ) ) ]
+					l_duration  = ( l_duration, l_selected_song.get( 'duration'   ) )[ bool( l_selected_song.get( 'duration'   ) ) ]
+				# Prepare a dict describing the dialog box
+				l_dlg_dict = l_common_dlg_dict |\
+				{
+					'title'    : l_dlg_title,
+					'controls' :\
+					[
+						{
+							'name'  : 'name',
+							'label' : '    name: ',
+							'value' : l_name,
+							'lines' : 1,
+							'max_length' :  50
+						},
+						{
+							'name'  : 'duration',
+							'label' : 'duration: ',
+							'value' : l_duration,
+							'lines' : 1,
+							'max_length' : 4
+						}
+					]
+				}
+				# Display an edit dialog that changes the values in the dict
+				l_dialog_result = dialog.dialog( self.m_main_curses_window, l_dlg_dict )
+				# Prepare a common list of sql params
+				l_sql_params =\
+				{
+					'name'     : dialog.get_value_from_ctl_dict_list( 'name',     l_dlg_dict.get( 'controls' ) ),
+					'duration' : dialog.get_value_from_ctl_dict_list( 'duration', l_dlg_dict.get( 'controls' ) ),
+					'album_id' : l_selected_album.get( 'id ' )
+				}
+				# Values were changed
+				if l_dialog_result[ 0 ] and l_dialog_result[ 1 ] :
+					# Prepare a sql query
+					l_sql_query = ''
+					if p_add_flag :
+						# Prepare a sql query for adding new artist
+						l_sql_query =\
+						f'''
+						INSERT INTO
+							songs ( name, duration, album_id )
+						VALUES
+							( :name, :duration, :album_id )
+						'''
+						# Add album_id to the params dict because we are adding a new song
+						l_sql_params |= { 'album_id'     : l_selected_album.get( 'id' ) }
+					else :
+						l_sql_query =\
+						f'''
+						UPDATE
+							songs
+						SET
+							name = :name,
+							duration = :duration
+						WHERE
+							id = :id
+						'''
+						# Add id to the params dict because we are updating an existing song
+						l_sql_params |= { 'id' : l_selected_song.get( 'id' ) }
+					# Execute sql query
+					db_result = sqlite_run( self.m_db_file_name, l_sql_query, l_sql_params )
+					if db_result[ 1 ] > 0 :
+						# Database was modified
+						if p_add_flag :
+							self.add_log( 'Added new song to the album.' )
+						else :
+							self.add_log( 'Saved changes of the selected song' )
+						self.reload_albums_on_artist( l_selected_album.get( 'artist_id' ) )
+						self.reload_songs_on_album( l_selected_album.get( 'id' ) )
+
+
+
+	def remove_menu( self ) :
+		l_remove_menu_choices =\
+		{
+			'choices' :
+			[
+				[ 'No' ],
+				[ 'Yes' ]
+			],
+			'title' : ''
+		}
+		l_selected_list = self.m_lists[ self.m_selected_list_idx ]
+		if l_selected_list is None :
+			return
+		l_selected_item  = l_selected_list.get_selected_item()
+		if l_selected_item is None :
+			return
+		l_selected_list_name = l_selected_list.get_name()
+		# Show different dialog depending on which list has focus
+		l_common_sql_query =\
+		f'''
+		DELETE FROM
+			{ l_selected_list_name }
+		WHERE
+			id = :id
+		'''
+		l_sql_params = { 'id' : l_selected_item.get( 'id' ) }
+		match l_selected_list_name :
+			case 'artists' :
+				# For artist
+				l_remove_menu_choices[ 'title' ] = f'''Really remove the artist: "{ l_selected_item.get( 'name' ) }"? All albums and related songs will also be removed.'''
+				l_sql_params |=\
+				{
+					'name' : l_selected_item.get( 'name' )
+				}
+			case 'albums' :
+				# For album
+				l_remove_menu_choices[ 'title' ] = f'''Really remove the album: "{ l_selected_item.get( 'title' ) }"? All related songs will also be removed.'''
+				l_sql_params |=\
+				{
+					'title' : l_selected_item.get( 'title' )
+				}
+			case 'songs' :
+				# For song
+				l_remove_menu_choices[ 'title' ] = f'''Really remove the song: "{ l_selected_item.get( 'name' ) }"?'''
+				l_sql_params |=\
+				{
+					'name' : l_selected_item.get( 'name' )
+				}
+		# Ask the user to confirm
+		l_remove_menu_choice = get_menu_choice( self.m_main_curses_window, l_remove_menu_choices )
+		# Choice #0 indicates to remove the item
+		if l_remove_menu_choice == 1 :
+			# Execute sql query
+			db_result = sqlite_run_v2( self.m_db_file_name, l_common_sql_query, l_sql_params )
+			if db_result[ 'rowcount' ] > 0 :
+				# Database was modified
+				self.add_log( 'Removed item.' )
+				match l_selected_list_name :
+					case 'artists' :
+						# An artist was removed, reload artists table
+						self.reload_artists()
+						self.m_artists_list.select_first()
+						# Continue load albums of first artist and songs of first album of that artist?
+						# l_selected_artist = self.m_artists_list.get_selected_item()
+						# if l_selected_artist is None :
+						# 	return
+						# self.reload_albums_on_artist( l_selected_artist.get( 'id' ) )
+						# # Select first album
+						# self.m_albums_list.select_first()
+						# l_selected_album = self.m_albums_list.get_selected_item()
+						# if l_selected_album is None :
+						# 	return
+						# self.reload_songs_on_album( l_selected_album.get( 'id' ) )
+						# self.m_songs_list.select_first()
+					case 'albums' :
+						# An album was removed, reload albums table
+						l_selected_artist = self.m_artists_list.get_selected_item()
+						if l_selected_artist is None :
+							return
+						self.reload_albums_on_artist( l_selected_artist.get( 'id' ) )
+						self.m_albums_list.select_first()
+						# Continue load albums of first artist and songs of first album of that artist?
+						# Select first album
+						# l_selected_album = self.m_albums_list.get_selected_item()
+						# if l_selected_album is None :
+						# 	return
+						# self.reload_songs_on_album( l_selected_album.get( 'id' ) )
+						# self.m_songs_list.select_first()
+					case 'songs' :
+						# A song was removed, reload songs table
+						l_selected_album = self.m_albums_list.get_selected_item()
+						if l_selected_album is None :
+							return
+						self.reload_songs_on_album( l_selected_album.get( 'id' ) )
+						# Select first album ?
+						# self.m_songs_list.select_first()
+
+
+
 	def run( self, p_stdscr ) :
 		self.m_main_curses_window = p_stdscr
 
@@ -390,7 +806,7 @@ class App :
 
 		# Get the size of the screen
 		l_scr_size_yx = self.m_main_curses_window.getmaxyx()
-		l_available_screen_width = l_scr_size_yx[ 1 ]
+		#l_available_screen_width = l_scr_size_yx[ 1 ]
 		l_available_screen_height = l_scr_size_yx[ 0 ] - 1 - 1
 
 		# Init database and create tables, if new
@@ -398,36 +814,43 @@ class App :
 
 		# Define 4 list boxes for UI
 		# Artists list
-		self.m_lists.append( ScrollList( self.m_main_curses_window, 'artists', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 3 ) - 1, 1, 0, False ) )
+		self.m_artists_list = ScrollList( self.m_main_curses_window, 'artists', True, int( l_available_screen_height - 8 ), 25, 1, 0, False )
+		#self.m_lists.append( ScrollList( self.m_main_curses_window, 'artists', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 3 ) - 1, 1, 0, False ) )
+		self.m_lists.append( self.m_artists_list )
 		self.m_artists_list_idx = len( self.m_lists ) - 1
 		# Albums list
 		l_available_screen_width = l_scr_size_yx[ 1 ] - self.m_lists[ 0 ].m_left_int - self.m_lists[ 0 ].m_cols_int - 2
-		self.m_lists.append( ScrollList( self.m_main_curses_window, 'albums', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 2 ), 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, False ) )
+		self.m_albums_list = ScrollList( self.m_main_curses_window, 'albums', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 2 ), 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, False )
+		self.m_lists.append( self.m_albums_list )
 		self.m_albums_list_idx = len( self.m_lists ) - 1
 		# Songs list
 		l_available_screen_width = l_scr_size_yx[ 1 ] - self.m_lists[ 1 ].m_left_int - self.m_lists[ 1 ].m_cols_int - 2
-		self.m_lists.append( ScrollList( self.m_main_curses_window, 'songs', True, int( l_available_screen_height - 8 ), l_available_screen_width, 1, self.m_lists[ 1 ].m_left_int + self.m_lists[ 1 ].m_cols_int + 1, False, [ curses.KEY_ENTER, 13, 10 ] ) )
+		self.m_songs_list = ScrollList( self.m_main_curses_window, 'songs', True, int( l_available_screen_height - 8 ), l_available_screen_width, 1, self.m_lists[ 1 ].m_left_int + self.m_lists[ 1 ].m_cols_int + 1, False )
+		self.m_lists.append( self.m_songs_list )
 		self.m_songs_list_idx = len( self.m_lists ) - 1
 		# Logs list
 		l_available_screen_height -= (self.m_lists[ 0 ].m_lines_int + 2 )
 		l_available_screen_width = l_scr_size_yx[ 1 ] - self.m_lists[ 0 ].m_left_int - self.m_lists[ 0 ].m_cols_int - 2
-		self.m_lists.append( ScrollList( self.m_main_curses_window, 'log', False, l_available_screen_height, l_available_screen_width, self.m_lists[ 0 ].m_top_int + self.m_lists[ 0 ].m_lines_int + 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, True, [ curses.KEY_ENTER, 13, 10 ] ) )
+		self.m_lists.append( ScrollList( self.m_main_curses_window, 'log', False, l_available_screen_height, l_available_screen_width, self.m_lists[ 0 ].m_top_int + self.m_lists[ 0 ].m_lines_int + 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, True, [ curses.KEY_ENTER, 13, 10, curses.KEY_F4, curses.KEY_F7, curses.KEY_F8 ] ) )
 		self.m_log_list_idx = len( self.m_lists ) - 1
 
 		# Add a message to the log
 		self.add_log( f'Welcome to { self.m_app_title } { self.m_app_version }.' )
 		# Populate UI lists with data from database
 		self.reload_artists()
-		# Select first album of that artist
 		self.m_lists[ self.m_artists_list_idx ].select_first()
-		# Reload albums that belong to this artist
-		self.reload_albums_on_artist( self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'id' ) )
-		# Select first album of that artist
-		self.m_lists[ self.m_albums_list_idx ].select_first()
-		# Reload songs that belong to this album
-		self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
-		# # Select first song of that album
-		self.m_lists[ self.m_songs_list_idx ].select_first()
+		l_selected_artist = self.m_lists[ self.m_artists_list_idx ].get_selected_item()
+		if l_selected_artist is not None :
+			# Reload albums that belong to this artist
+			self.reload_albums_on_artist( l_selected_artist.get( 'id' ) )
+			# Select first album of that artist
+			self.m_lists[ self.m_albums_list_idx ].select_first()
+			l_selected_album = self.m_lists[ self.m_albums_list_idx ].get_selected_item()
+			if l_selected_album is not None :
+				# Reload songs that belong to this album
+				self.reload_songs_on_album( l_selected_album.get( 'id' ) )
+				# # Select first song of that album
+				self.m_lists[ self.m_songs_list_idx ].select_first()
 
 		# Create menus
 		# l_delete_menu_choices =\
@@ -466,26 +889,28 @@ class App :
 					if self.m_selected_list_idx < 0 : self.m_selected_list_idx = 0
 					self.m_lists[ self.m_selected_list_idx ].m_curses_win_obj.refresh()
 				case curses.KEY_ENTER | 459 | 13 | 10 :
-					if not any( x in [ curses.KEY_ENTER, 13, 10 ] for x in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys ) and self.m_lists[ self.m_selected_list_idx ].select_item_pointed() :
+					if not any( x in [ curses.KEY_ENTER, 13, 10 ] for x in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys ) :
+						#self.m_lists[ self.m_selected_list_idx ].select_item_pointed()
 						#l_selected_data = self.m_lists[ self.m_selected_list_idx ].get_selected_item()
 						#if l_selected_data is not None :
 							match self.m_selected_list_idx :
 								case 0 :
-									self.add_log( 'Activated artist: ' + self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'name' ) )
+									self.add_log( 'Loaded in artist: ' + self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'name' ) )
 									# Reload albums that belong to this artist
 									self.reload_albums_on_artist( self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'id' ) )
-									#self.reload_albums_on_artist( l_selected_data[ list( l_selected_data )[ 0 ] ] )
-									# Select first album of that artist
-									self.m_lists[ self.m_albums_list_idx ].select_first()
-									# Reload songs that belong to this album
-									self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
-									# # Select first song of that album
-									self.m_lists[ self.m_songs_list_idx ].select_first()
+									if self.m_artist_num_albums > 0 :
+										# Select first album of that artist
+										self.m_lists[ self.m_albums_list_idx ].select_first()
+										# Reload songs that belong to this album
+										if self.m_lists[ self.m_albums_list_idx ].get_selected_item() is not None :
+											self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
+											# Select first song of that album
+											self.m_lists[ self.m_songs_list_idx ].select_first()
 								case 1 :
-									self.add_log( 'Activated album: ' + self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'title' ) )
+									self.add_log( 'Loaded in album: ' + self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'title' ) )
 									# Reload songs that belong to this album
 									self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
-									# # Select first song of that album
+									# Select first song of that album
 									self.m_lists[ self.m_songs_list_idx ].select_first()
 				case curses.KEY_F1 :
 					self.features_dialog()
@@ -493,13 +918,16 @@ class App :
 					# The search dialog
 					self.search_dialog()
 				case curses.KEY_F4 :
-					self.edit_dialog()
-				case curses.KEY_F8 :
+					if curses.KEY_F4 not in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys :
+						self.add_or_edit_dialog() # True == add
+				case curses.KEY_F7 :
 					# The Add menu
-					pass
-				case curses.CTL_DEL :
+					if curses.KEY_F7 not in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys :
+						self.add_or_edit_dialog( True )
+				case curses.KEY_F8 :
 					# The Remove menu
-					pass
+					if curses.KEY_F8 not in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys :
+						self.remove_menu()
 				case curses.KEY_F10 :
 					# The quit dialog
 					self.redraw_main_bars()

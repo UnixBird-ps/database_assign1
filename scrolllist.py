@@ -1,6 +1,8 @@
 import curses
+import curses
 from curses.textpad import rectangle
 from utils import debug_info
+
 
 
 class ScrollList :
@@ -78,13 +80,16 @@ class ScrollList :
 		#self.m_curses_win_obj.idlok( 1 )
 
 
+
 	def get_name( self ) :
 		return self.m_name
+
 
 
 	def create_window( self, p_parent ) :
 		self.m_curses_win_parent_obj = p_parent
 		self.m_curses_win_obj = p_parent.subwin( self.m_inner_lines_int + 1, self.m_inner_cols_int + 1, self.m_top_int + 1, self.m_left_int + 1 )
+
 
 
 	def redraw_list( self, p_has_focus_bool, p_options = None ) :
@@ -93,7 +98,7 @@ class ScrollList :
 		if len( self.m_items_list ) > 0 :
 			l_shown_cols_list = range( len( self.m_items_list[ 0 ] ) )
 			l_justify_list = [ 'center' ] * len( self.m_items_list[ 0 ] )
-		if not p_options is None :
+		if p_options is not None :
 			if 'shown_cols_list' in list( p_options ) : l_shown_cols_list = p_options.get( 'shown_cols_list' )
 			if 'justify_list' in list( p_options ) : l_justify_list = p_options.get( 'justify_list' )
 
@@ -126,54 +131,56 @@ class ScrollList :
 				for field_itr, field_val in enumerate( row_val ) :
 					l_col_width_list[ field_itr ] = max( l_col_width_list[ field_itr ], len( str( field_val) ) )
 			# Draw content of the list
-			for idx in range( self.m_inner_lines_int ) :
+			for itr in range( self.m_inner_lines_int ) :
 				# Calculate list index
-				item_idx = self.m_scroll_region_top_int + idx
+				item_idx = self.m_scroll_region_top_int + itr
 				# Make sure selected index is within bounds
 				if item_idx < 0 : break
 				if item_idx >= len( self.m_items_list ) : break
 				# Get row elements
-				itm = ''
+				new_row_str = ''
 				l_list_row_dict = self.m_items_list[ item_idx ]
 				if len( l_shown_cols_list ) == 1 :
 					# Show exactly one field from the field id list
-					itm += f'{ l_list_row_dict.get( list( l_list_row_dict )[ l_shown_cols_list[ 0 ] ] ) }'
+					new_row_str += f'{ l_list_row_dict.get( list( l_list_row_dict )[ l_shown_cols_list[ 0 ] ] ) }'
 				elif len( l_shown_cols_list ) > 1 :
 					# Make room for last field
-					l_width_available = self.m_inner_cols_int - 2 - l_col_width_list[ l_shown_cols_list[ -1 ] ]
-					for shown_col_itr, shown_col_value in enumerate( l_shown_cols_list ) :
+					l_width_available = self.m_inner_cols_int - 2 # - l_col_width_list[ l_shown_cols_list[ -1 ] ]
+					for shown_col_itr, shown_col_value in enumerate( reversed( l_shown_cols_list ) ) :
 						# Store the value
-						l_value = str( l_list_row_dict[ list( l_list_row_dict )[ shown_col_value ] ] ).strip()
-						l_justify_value = l_justify_list[ shown_col_itr ]
+						l_dict_key = list( l_list_row_dict.keys() )[ shown_col_value ]
+						l_value = str( l_list_row_dict[ l_dict_key ] ) #.strip()
+						l_justify_value = list( reversed( l_justify_list ) )[ shown_col_itr ]
 						if shown_col_itr != len( l_shown_cols_list ) - 1 :
 							# What columns in list to show
 							match l_justify_value :
 								case 'left' :
-									itm += f'{ l_value }'[ :l_width_available ].ljust( l_width_available )
+									new_row_str = f'{ l_value }'[ :l_col_width_list[ shown_col_value ] ].ljust( l_col_width_list[ shown_col_value ] ) + new_row_str
 								case 'right' :
-									itm += f'{ l_value }'[ :l_width_available ].rjust( l_width_available )
+									new_row_str = f'{ l_value }'[ :l_col_width_list[ shown_col_value ] ].rjust( l_col_width_list[ shown_col_value ] ) + new_row_str
 								case 'center' :
-									itm += f'{ l_value }'[ :l_width_available ].center( l_width_available )
+									new_row_str = f'{ l_value }'[ :l_col_width_list[ shown_col_value ] ].center( l_col_width_list[ shown_col_value ] ) + new_row_str
 						else :
-							# Last column is special
-							itm += f'{ l_value }'[ :l_col_width_list[ l_shown_cols_list[ -1 ] ] ].rjust( l_col_width_list[ l_shown_cols_list[ -1 ] ] )
+							# Last column is special, which will beactually the first because the loop is reversed
+							# itm += f'{ l_value }'[ :l_col_width_list[ l_shown_cols_list[ -1 ] ] ].rjust( l_col_width_list[ l_shown_cols_list[ -1 ] ] )
+							new_row_str = f'{ l_value }'[ :l_width_available - len( new_row_str )].ljust( l_width_available - len( new_row_str ) ) + new_row_str
 
 
 				# Add padding
-				itm = itm[ : self.m_inner_cols_int - 2 ].ljust( self.m_inner_cols_int - 2 )
-				itm = ' ' + itm + ' '
+				new_row_str = new_row_str[ : self.m_inner_cols_int - 2 ].ljust( self.m_inner_cols_int - 2 )
+				new_row_str = ' ' + new_row_str + ' '
 
 				# Draw selection differently
 				if item_idx == self.m_scroll_pointer_int and p_has_focus_bool :
-					self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
+					self.m_curses_win_obj.addnstr( 0 + itr, 0, new_row_str, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
 				else :
-					self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int )
+					self.m_curses_win_obj.addnstr( 0 + itr, 0, new_row_str, self.m_inner_cols_int )
 
 				if item_idx == self.m_selected_item_int :
 					if p_has_focus_bool :
-						self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, curses.A_REVERSE )
+						self.m_curses_win_obj.addnstr( 0 + itr, 0, new_row_str, self.m_inner_cols_int, curses.A_REVERSE )
 					else :
-						self.m_curses_win_obj.addnstr( 0 + idx, 0, itm, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
+						self.m_curses_win_obj.addnstr( 0 + itr, 0, new_row_str, self.m_inner_cols_int, self._BLACK_AND_DARK_GRAY )
 		else :
 			# The list is empty
 			self.m_curses_win_obj.addnstr( 0 , 1, 'Empty', self.m_inner_cols_int, self._DARK_GRAY_AND_BLACK )
@@ -182,11 +189,13 @@ class ScrollList :
 		self.m_curses_win_obj.refresh()
 
 
+
 	def select_item_pointed( self ) :
 		if len( self.m_items_list ) > 0 and self.m_scroll_pointer_int != self.m_selected_item_int :
 			self.m_selected_item_int = self.m_scroll_pointer_int
 			return True
 		else : return False
+
 
 
 	def select_item_on_dict( self, p_selection_dict ) :
@@ -212,22 +221,28 @@ class ScrollList :
 				break
 
 
+
 	def select_item( self, p_item_idx_int ) :
-		if p_item_idx_int > len( self.m_items_list ) - 1 : p_item_idx_int = len( self.m_items_list ) - 1
-		if p_item_idx_int < 0 : p_item_idx_int = 0
-		self.m_selected_item_int = p_item_idx_int
-		self.m_scroll_pointer_int = p_item_idx_int
+		if len( self.m_items_list ) > 0 :
+			if p_item_idx_int > len( self.m_items_list ) - 1 : p_item_idx_int = len( self.m_items_list ) - 1
+			if p_item_idx_int < 0 : p_item_idx_int = 0
+			self.m_selected_item_int = p_item_idx_int
+			self.m_scroll_pointer_int = p_item_idx_int
+
 
 
 	def select_first( self ) :
-		self.m_selected_item_int = 0
-		self.m_scroll_pointer_int = 0
+		if len( self.m_items_list ) > 0 :
+			self.m_selected_item_int = 0
+			self.m_scroll_pointer_int = 0
+
 
 
 	def get_selected_item( self ) :
 		if len( self.m_items_list ) > 0 :
 			return self.m_items_list[ self.m_selected_item_int ]
 		else : return None
+
 
 
 	def scroll_rel( self, p_rel_pos_int  ) :
@@ -248,6 +263,8 @@ class ScrollList :
 			if self.m_scroll_region_top_int < self.m_scroll_pointer_int - ( self.m_inner_lines_int - 1 ) :
 				self.m_scroll_region_top_int = self.m_scroll_pointer_int - ( self.m_inner_lines_int - 1 )
 			if self.m_scroll_region_top_int < 0 : self.m_scroll_region_top_int = 0
+			self.m_selected_item_int = self.m_scroll_pointer_int
+
 
 
 	def add_item( self, p_new_item_dict ) :
@@ -255,6 +272,7 @@ class ScrollList :
 		if self.m_auto_scroll_bool :
 			self.m_scroll_pointer_int = len( self.m_items_list ) - 1
 			self.scroll_rel( 1 )
+
 
 
 	def empty_list( self ) :

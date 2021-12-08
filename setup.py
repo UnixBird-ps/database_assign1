@@ -8,10 +8,10 @@ def init_db( p_db_file_name_str ) :
 			p_db_file_name_str,
 			'artists',
 			'''
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 			name VARCHAR ( 100 ) NOT NULL,
-			description VARCHAR ( 250 ) NOT NULL,
-			UNIQUE ( name, description )
+			description VARCHAR ( 500 ),
+			UNIQUE( name )
 			'''
 		)
 		print( 'Table "artists" was ' + ( 'not', '' )[db_result] + 'created.' )
@@ -23,13 +23,13 @@ def init_db( p_db_file_name_str ) :
 			p_db_file_name_str,
 			'albums',
 			'''
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 			title VARCHAR ( 100 ) NOT NULL,
-			description VARCHAR ( 250 ) NOT NULL,
+			description VARCHAR ( 500 ),
 			year_released INTEGER,
 			artist_id INTEGER NOT NULL,
-			FOREIGN KEY ( artist_id ) REFERENCES artists ( id ),
-			UNIQUE ( title, description, artist_id )
+			FOREIGN KEY ( artist_id ) REFERENCES artists ( id ) ON DELETE CASCADE,
+			UNIQUE ( title, artist_id )
 			'''
 		)
 		print( 'Table "albums" was', ( 'not', '' )[db_result] + 'created.' )
@@ -41,47 +41,15 @@ def init_db( p_db_file_name_str ) :
 			p_db_file_name_str,
 			'songs',
 			'''
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 			name VARCHAR ( 100 ) NOT NULL,
-			duration INTEGER NOT NULL,
-			album_id INTEGER,
-			FOREIGN KEY ( album_id ) REFERENCES albums ( id ),
-			UNIQUE ( name, duration, album_id )
+			duration INTEGER,
+			album_id INTEGER NOT NULL,
+			FOREIGN KEY ( album_id ) REFERENCES albums ( id ) ON DELETE CASCADE,
+			UNIQUE ( name, album_id )
 			'''
 		)
 		print( 'Table "songs" was', ( 'not', '' )[db_result] + 'created.' )
-
-
-	# Create the artistsXalbums table
-
-	# db_result = sqlite_create_table(
-	# 	p_db_file_name_str,
-	# 	'artistsXalbums',
-	# 	'''
-	# 	artist_id INTEGER NOT NULL,
-	# 	album_id INTEGER NOT NULL,
-	# 	FOREIGN KEY ( artist_id ) REFERENCES artists ( id ),
-	# 	FOREIGN KEY ( album_id ) REFERENCES albums ( id ),
-	# 	UNIQUE ( artist_id, album_id )
-	# 	'''
-	# )
-	# print( 'Table "artistsXalbums" was', ( 'not', '' )[db_result] + 'created.' )
-
-
-	# Create the albumsXsongs table
-
-	# db_result = sqlite_create_table(
-	# 	p_db_file_name_str,
-	# 	'albumsXsongs',
-	# 	'''
-	# 	album_id INTEGER NOT NULL,
-	# 	song_id INTEGER NOT NULL,
-	# 	FOREIGN KEY ( album_id ) REFERENCES albums ( id ),
-	# 	FOREIGN KEY ( song_id ) REFERENCES songs ( id ),
-	# 	UNIQUE ( album_id, song_id )
-	# 	'''
-	# )
-	# print( 'Table "albumsXsongs" was', ( 'not', '' )[db_result] + 'created.' )
 
 
 	# Populate the artists table with initial values
@@ -165,4 +133,4 @@ def init_db( p_db_file_name_str ) :
 			( 'Pigeon Song', 138, 7 )
 	ON CONFLICT DO NOTHING
 	''' )
-	if db_result[ 1 ] > 0: print( 'Populated table "albums".' )
+	if db_result[ 1 ] > 0: print( 'Populated table "songs".' )
