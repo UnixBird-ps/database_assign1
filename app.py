@@ -18,10 +18,11 @@ class App :
 		self.m_artists_list_idx = 0
 		self.m_albums_list_idx = 1
 		self.m_songs_list_idx = 2
+		self.m_log_list_idx = 3
 		self.m_artists_list = None
 		self.m_albums_list = None
 		self.m_songs_list = None
-		self.m_log_list_idx = 3
+		self.m_log_list = None
 		self.m_main_curses_window = None
 		self.m_artist_num_songs = 0
 		self.m_artist_num_albums = 0
@@ -29,7 +30,7 @@ class App :
 
 
 	def add_log( self, p_msg ) :
-		self.m_lists[ self.m_log_list_idx ].add_item( { 'msg' : p_msg } )
+		self.m_log_list.add_item( { 'msg' : p_msg } )
 
 
 
@@ -799,6 +800,9 @@ class App :
 
 
 	def run( self, p_stdscr ) :
+		# Enure we have specific terminal size
+		curses.resize_term( 30, 120 )
+
 		self.m_main_curses_window = p_stdscr
 
 		# Hide blinking cursor
@@ -806,7 +810,6 @@ class App :
 
 		# Get the size of the screen
 		l_scr_size_yx = self.m_main_curses_window.getmaxyx()
-		#l_available_screen_width = l_scr_size_yx[ 1 ]
 		l_available_screen_height = l_scr_size_yx[ 0 ] - 1 - 1
 
 		# Init database and create tables, if new
@@ -814,24 +817,49 @@ class App :
 
 		# Define 4 list boxes for UI
 		# Artists list
-		self.m_artists_list = ScrollList( self.m_main_curses_window, 'artists', True, int( l_available_screen_height - 8 ), 25, 1, 0, False )
-		#self.m_lists.append( ScrollList( self.m_main_curses_window, 'artists', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 3 ) - 1, 1, 0, False ) )
+		l_artists_list_options_dict =\
+		{
+			'vis_cols_list' : [ 1 ],
+			'col_names_list' : [ 'Name' ],
+			'justify_list' : [ 'left' ]
+		}
+		self.m_artists_list = ScrollList( self.m_main_curses_window, 'artists', True, int( l_available_screen_height - 8 ), 25, 1, 0, False, options = l_artists_list_options_dict )
 		self.m_lists.append( self.m_artists_list )
 		self.m_artists_list_idx = len( self.m_lists ) - 1
 		# Albums list
+		l_albums_list_options_dict =\
+		{
+			'vis_cols_list' : [ 1, 3, 5, 6 ],
+			'col_names_list' : [ 'Title', 'Year', 'Length', 'Songs' ],
+			'justify_list' : [ 'left', 'right', 'right', 'right' ]
+		}
 		l_available_screen_width = l_scr_size_yx[ 1 ] - self.m_lists[ 0 ].m_left_int - self.m_lists[ 0 ].m_cols_int - 2
-		self.m_albums_list = ScrollList( self.m_main_curses_window, 'albums', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 2 ), 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, False )
+		self.m_albums_list = ScrollList( self.m_main_curses_window, 'albums', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 2 ), 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, False, options = l_albums_list_options_dict )
 		self.m_lists.append( self.m_albums_list )
 		self.m_albums_list_idx = len( self.m_lists ) - 1
 		# Songs list
+		l_songs_list_options_dict =\
+		{
+			'vis_cols_list' : [ 1, 2 ],
+			'col_names_list' : [ 'Title', 'Length' ],
+			'justify_list' : [ 'left', 'right' ]
+		}
 		l_available_screen_width = l_scr_size_yx[ 1 ] - self.m_lists[ 1 ].m_left_int - self.m_lists[ 1 ].m_cols_int - 2
-		self.m_songs_list = ScrollList( self.m_main_curses_window, 'songs', True, int( l_available_screen_height - 8 ), l_available_screen_width, 1, self.m_lists[ 1 ].m_left_int + self.m_lists[ 1 ].m_cols_int + 1, False )
+		self.m_songs_list = ScrollList( self.m_main_curses_window, 'songs', True, int( l_available_screen_height - 8 ), l_available_screen_width, 1, self.m_lists[ 1 ].m_left_int + self.m_lists[ 1 ].m_cols_int + 1, False, options = l_songs_list_options_dict )
 		self.m_lists.append( self.m_songs_list )
 		self.m_songs_list_idx = len( self.m_lists ) - 1
 		# Logs list
+		l_log_list_options_dict =\
+		{
+			'shown_cols_list' : [ 0, 1 ],
+			'col_names' : [ 'Time', 'Message' ],
+			'justify_list' : [ 'left', 'left' ],
+			'disabled_keys' : [ curses.KEY_ENTER, 13, 10, curses.KEY_F4, curses.KEY_F7, curses.KEY_F8 ]
+		}
 		l_available_screen_height -= (self.m_lists[ 0 ].m_lines_int + 2 )
 		l_available_screen_width = l_scr_size_yx[ 1 ] - self.m_lists[ 0 ].m_left_int - self.m_lists[ 0 ].m_cols_int - 2
-		self.m_lists.append( ScrollList( self.m_main_curses_window, 'log', False, l_available_screen_height, l_available_screen_width, self.m_lists[ 0 ].m_top_int + self.m_lists[ 0 ].m_lines_int + 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, True, [ curses.KEY_ENTER, 13, 10, curses.KEY_F4, curses.KEY_F7, curses.KEY_F8 ] ) )
+		self.m_log_list = ScrollList( self.m_main_curses_window, 'log', False, l_available_screen_height, l_available_screen_width, self.m_lists[ 0 ].m_top_int + self.m_lists[ 0 ].m_lines_int + 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, True, options = l_log_list_options_dict )
+		self.m_lists.append( self.m_log_list )
 		self.m_log_list_idx = len( self.m_lists ) - 1
 
 		# Add a message to the log
@@ -852,16 +880,7 @@ class App :
 				# # Select first song of that album
 				self.m_lists[ self.m_songs_list_idx ].select_first()
 
-		# Create menus
-		# l_delete_menu_choices =\
-		# {
-		# 	'choices' :
-		# 	[
-		# 		[ 'No' ],
-		# 		[ 'Yes' ]
-		# 	],
-		# 	'title' : 'Really remove? All {1} belonging to this {2} will be removed.'
-		# }
+		# Define the Quit menu
 		l_quit_menu_choices =\
 		{
 			'choices' :
@@ -889,29 +908,26 @@ class App :
 					if self.m_selected_list_idx < 0 : self.m_selected_list_idx = 0
 					self.m_lists[ self.m_selected_list_idx ].m_curses_win_obj.refresh()
 				case curses.KEY_ENTER | 459 | 13 | 10 :
-					if not any( x in [ curses.KEY_ENTER, 13, 10 ] for x in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys ) :
-						#self.m_lists[ self.m_selected_list_idx ].select_item_pointed()
-						#l_selected_data = self.m_lists[ self.m_selected_list_idx ].get_selected_item()
-						#if l_selected_data is not None :
-							match self.m_selected_list_idx :
-								case 0 :
-									self.add_log( 'Loaded in artist: ' + self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'name' ) )
-									# Reload albums that belong to this artist
-									self.reload_albums_on_artist( self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'id' ) )
-									if self.m_artist_num_albums > 0 :
-										# Select first album of that artist
-										self.m_lists[ self.m_albums_list_idx ].select_first()
-										# Reload songs that belong to this album
-										if self.m_lists[ self.m_albums_list_idx ].get_selected_item() is not None :
-											self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
-											# Select first song of that album
-											self.m_lists[ self.m_songs_list_idx ].select_first()
-								case 1 :
-									self.add_log( 'Loaded in album: ' + self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'title' ) )
+					if not any( x in [ curses.KEY_ENTER, 459, 13, 10 ] for x in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys_list ) :
+						match self.m_selected_list_idx :
+							case 0 :
+								self.add_log( 'Loaded in artist: ' + self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'name' ) )
+								# Reload albums that belong to this artist
+								self.reload_albums_on_artist( self.m_lists[ self.m_artists_list_idx ].get_selected_item().get( 'id' ) )
+								if self.m_artist_num_albums > 0 :
+									# Select first album of that artist
+									self.m_lists[ self.m_albums_list_idx ].select_first()
 									# Reload songs that belong to this album
-									self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
-									# Select first song of that album
-									self.m_lists[ self.m_songs_list_idx ].select_first()
+									if self.m_lists[ self.m_albums_list_idx ].get_selected_item() is not None :
+										self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
+										# Select first song of that album
+										self.m_lists[ self.m_songs_list_idx ].select_first()
+							case 1 :
+								self.add_log( 'Loaded in album: ' + self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'title' ) )
+								# Reload songs that belong to this album
+								self.reload_songs_on_album( self.m_lists[ self.m_albums_list_idx ].get_selected_item().get( 'id' ) )
+								# Select first song of that album
+								self.m_lists[ self.m_songs_list_idx ].select_first()
 				case curses.KEY_F1 :
 					self.features_dialog()
 				case curses.KEY_F3 :

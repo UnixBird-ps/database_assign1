@@ -7,8 +7,28 @@ from utils import debug_info
 
 class ScrollList :
 
-	def __init__( self, p_parent_window_obj, p_name, p_editable_bool, p_lines_int, p_cols_int, p_top_int, p_left_int, p_auto_scroll_bool, p_disabled_keys = None ) :
-		if p_disabled_keys is None : p_disabled_keys = []
+	def __init__( self, p_parent_window_obj, p_name, p_editable_bool, p_lines_int, p_cols_int, p_top_int, p_left_int, p_auto_scroll_bool, options = None ) :
+		if options is not None and 'vis_cols_list' in list( options ) :
+			self.m_disabled_keys_list = options.get( 'vis_cols_list' )
+		else :
+			self.m_disabled_keys_list = []
+
+		if options is not None and 'col_names_list' in list( options ) :
+			self.m_col_names = options.get( 'col_names_list' )
+		else :
+			self.m_col_names = []
+
+		if options is not None and 'justify_list' in list( options ) :
+			self.m_col_names = options.get( 'justify_list' )
+		else :
+			self.m_col_names = []
+
+		if options is not None and 'disabled_keys_list' in list( options ) :
+			self.m_disabled_keys_list = options.get( 'disabled_keys' )
+		else :
+			self.m_disabled_keys_list = []
+
+
 
 		self.m_name = p_name
 
@@ -33,7 +53,6 @@ class ScrollList :
 		self.m_scroll_region_top_int = 0
 		self.m_scroll_pointer_int = 0
 		self.m_auto_scroll_bool = p_auto_scroll_bool
-		self.m_disabled_keys = p_disabled_keys
 
 		self.m_curses_win_parent_obj = None
 		self.m_curses_win_obj = None
@@ -92,15 +111,15 @@ class ScrollList :
 
 
 
-	def redraw_list( self, p_has_focus_bool, p_options = None ) :
+	def redraw_list( self, p_has_focus_bool, p_options_dict = None ) :
 		l_shown_cols_list = []
 		l_justify_list = []
 		if len( self.m_items_list ) > 0 :
 			l_shown_cols_list = range( len( self.m_items_list[ 0 ] ) )
 			l_justify_list = [ 'center' ] * len( self.m_items_list[ 0 ] )
-		if p_options is not None :
-			if 'shown_cols_list' in list( p_options ) : l_shown_cols_list = p_options.get( 'shown_cols_list' )
-			if 'justify_list' in list( p_options ) : l_justify_list = p_options.get( 'justify_list' )
+		if p_options_dict is not None :
+			if 'shown_cols_list' in list( p_options_dict ) : l_shown_cols_list = p_options_dict.get( 'shown_cols_list' )
+			if 'justify_list' in list( p_options_dict ) : l_justify_list = p_options_dict.get( 'justify_list' )
 
 		# Draw a border with a color depending on if this list has focus os not
 		if p_has_focus_bool : self.m_curses_win_parent_obj.attron( self._LIGHT_GREEN_AND_BLACK )
@@ -185,7 +204,6 @@ class ScrollList :
 			# The list is empty
 			self.m_curses_win_obj.addnstr( 0 , 1, 'Empty', self.m_inner_cols_int, self._DARK_GRAY_AND_BLACK )
 
-		#self.m_curses_win_parent_obj.addstr( self.m_top_int - 1, self.m_left_int + 1, str( self.m_scroll_pointer_int ) )
 		self.m_curses_win_obj.refresh()
 
 
@@ -268,6 +286,12 @@ class ScrollList :
 
 
 	def add_item( self, p_new_item_dict ) :
+		"""
+		Appends specified dict to the list
+		Keeps the last item visible if that option was specified at the this object's creation
+		:param   dict p_new_item_dict:  Data to be append
+		:return:
+		"""
 		self.m_items_list.append( p_new_item_dict )
 		if self.m_auto_scroll_bool :
 			self.m_scroll_pointer_int = len( self.m_items_list ) - 1
@@ -276,6 +300,10 @@ class ScrollList :
 
 
 	def empty_list( self ) :
+		"""
+		Removes all items in the list, resets selection and scroll position
+		:return: Nothing
+		"""
 		self.m_items_list = []
 		self.m_selected_item_int = -1
 		self.m_scroll_region_top_int = 0
