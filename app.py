@@ -4,6 +4,7 @@ from setup import init_db
 from menu import get_menu_choice, get_string_from_input
 from scrolllist import ScrollList
 from utils import debug_info
+import time
 import dialog
 
 
@@ -30,7 +31,7 @@ class App :
 
 
 	def add_log( self, p_msg ) :
-		self.m_log_list.add_item( { 'msg' : p_msg } )
+		self.m_log_list.add_item( { 'time' : time.strftime( '%Y-%m-%d %H:%M:%S' ), 'msg' : p_msg } )
 
 
 
@@ -69,10 +70,10 @@ class App :
 		# try :
 		for list_idx, list_obj in enumerate( self.m_lists ) :
 			l_selected_bool = list_idx == self.m_selected_list_idx
-			if list_idx == self.m_artists_list_idx : list_obj.redraw_list( l_selected_bool, { 'shown_cols_list' : [ 1 ], 'justify_list' : [ 'left' ] } )
-			elif list_idx == self.m_albums_list_idx : list_obj.redraw_list( l_selected_bool,  { 'shown_cols_list' : [ 1, 3, 5, 6 ], 'justify_list' : [ 'left', 'right', 'right', 'right' ] } )
-			elif list_idx == self.m_songs_list_idx : list_obj.redraw_list( l_selected_bool,  { 'shown_cols_list' : [ 1, 2 ], 'justify_list' : [ 'left', 'right' ] } )
-			elif list_idx == self.m_log_list_idx : list_obj.redraw_list( l_selected_bool,  { 'shown_cols_list' : [ 0 ], 'justify_list' : [ 'left' ] } )
+			if list_idx == self.m_artists_list_idx  : list_obj.redraw_list( l_selected_bool )#, { 'shown_cols_list' : [ 1 ], 'justify_list' : [ 'left' ] } )
+			elif list_idx == self.m_albums_list_idx : list_obj.redraw_list( l_selected_bool )#, { 'shown_cols_list' : [ 1, 3, 5, 6 ], 'justify_list' : [ 'left', 'right', 'right', 'right' ] } )
+			elif list_idx == self.m_songs_list_idx  : list_obj.redraw_list( l_selected_bool )#, { 'shown_cols_list' : [ 1, 2 ], 'justify_list' : [ 'left', 'right' ] } )
+			elif list_idx == self.m_log_list_idx    : list_obj.redraw_list( l_selected_bool )#, { 'shown_cols_list' : [ 0, 1 ], 'justify_list' : [ 'left', 'left' ] } )
 
 		l_sql_query =\
 		'''
@@ -800,8 +801,11 @@ class App :
 
 
 	def run( self, p_stdscr ) :
-		# Enure we have specific terminal size
-		curses.resize_term( 30, 120 )
+		# Ensure we have minimum terminal size
+		l_scr_hw = [ x for x in p_stdscr.getmaxyx() ]
+		if l_scr_hw[ 0 ] <  30 : l_scr_hw[ 0 ] =  30
+		if l_scr_hw[ 1 ] < 120 : l_scr_hw[ 1 ] = 120
+		curses.resize_term( l_scr_hw[ 0 ], l_scr_hw[ 1 ] )
 
 		self.m_main_curses_window = p_stdscr
 
@@ -820,41 +824,41 @@ class App :
 		l_artists_list_options_dict =\
 		{
 			'vis_cols_list' : [ 1 ],
-			'col_names_list' : [ 'Name' ],
+			'col_labels_list' : [ 'Name' ],
 			'justify_list' : [ 'left' ]
 		}
-		self.m_artists_list = ScrollList( self.m_main_curses_window, 'artists', True, int( l_available_screen_height - 8 ), 25, 1, 0, False, options = l_artists_list_options_dict )
+		self.m_artists_list = ScrollList( self.m_main_curses_window, 'artists', True, int( l_available_screen_height - 9 ), 25, 1, 0, False, options = l_artists_list_options_dict )
 		self.m_lists.append( self.m_artists_list )
 		self.m_artists_list_idx = len( self.m_lists ) - 1
 		# Albums list
 		l_albums_list_options_dict =\
 		{
 			'vis_cols_list' : [ 1, 3, 5, 6 ],
-			'col_names_list' : [ 'Title', 'Year', 'Length', 'Songs' ],
+			'col_labels_list' : [ 'Title', 'Year', 'Length', 'Songs' ],
 			'justify_list' : [ 'left', 'right', 'right', 'right' ]
 		}
 		l_available_screen_width = l_scr_size_yx[ 1 ] - self.m_lists[ 0 ].m_left_int - self.m_lists[ 0 ].m_cols_int - 2
-		self.m_albums_list = ScrollList( self.m_main_curses_window, 'albums', True, int( l_available_screen_height - 8 ), int( l_available_screen_width / 2 ), 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, False, options = l_albums_list_options_dict )
+		self.m_albums_list = ScrollList( self.m_main_curses_window, 'albums', True, int( l_available_screen_height - 9 ), int( l_available_screen_width / 2 ), 1, self.m_lists[ 0 ].m_left_int + self.m_lists[ 0 ].m_cols_int + 1, False, options = l_albums_list_options_dict )
 		self.m_lists.append( self.m_albums_list )
 		self.m_albums_list_idx = len( self.m_lists ) - 1
 		# Songs list
 		l_songs_list_options_dict =\
 		{
 			'vis_cols_list' : [ 1, 2 ],
-			'col_names_list' : [ 'Title', 'Length' ],
+			'col_labels_list' : [ 'Title', 'Length' ],
 			'justify_list' : [ 'left', 'right' ]
 		}
 		l_available_screen_width = l_scr_size_yx[ 1 ] - self.m_lists[ 1 ].m_left_int - self.m_lists[ 1 ].m_cols_int - 2
-		self.m_songs_list = ScrollList( self.m_main_curses_window, 'songs', True, int( l_available_screen_height - 8 ), l_available_screen_width, 1, self.m_lists[ 1 ].m_left_int + self.m_lists[ 1 ].m_cols_int + 1, False, options = l_songs_list_options_dict )
+		self.m_songs_list = ScrollList( self.m_main_curses_window, 'songs', True, int( l_available_screen_height - 9 ), l_available_screen_width, 1, self.m_lists[ 1 ].m_left_int + self.m_lists[ 1 ].m_cols_int + 1, False, options = l_songs_list_options_dict )
 		self.m_lists.append( self.m_songs_list )
 		self.m_songs_list_idx = len( self.m_lists ) - 1
 		# Logs list
 		l_log_list_options_dict =\
 		{
-			'shown_cols_list' : [ 0, 1 ],
-			'col_names' : [ 'Time', 'Message' ],
+			'vis_cols_list' : [ 0, 1 ],
+			'col_labels_list' : [ 'Time', 'Message' ],
 			'justify_list' : [ 'left', 'left' ],
-			'disabled_keys' : [ curses.KEY_ENTER, 13, 10, curses.KEY_F4, curses.KEY_F7, curses.KEY_F8 ]
+			'disabled_keys_list' : [ curses.KEY_ENTER, 13, 10, curses.KEY_F4, curses.KEY_F7, curses.KEY_F8 ]
 		}
 		l_available_screen_height -= (self.m_lists[ 0 ].m_lines_int + 2 )
 		l_available_screen_width = l_scr_size_yx[ 1 ] - self.m_lists[ 0 ].m_left_int - self.m_lists[ 0 ].m_cols_int - 2
@@ -934,15 +938,15 @@ class App :
 					# The search dialog
 					self.search_dialog()
 				case curses.KEY_F4 :
-					if curses.KEY_F4 not in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys :
+					if curses.KEY_F4 not in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys_list :
 						self.add_or_edit_dialog() # True == add
 				case curses.KEY_F7 :
 					# The Add menu
-					if curses.KEY_F7 not in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys :
+					if curses.KEY_F7 not in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys_list :
 						self.add_or_edit_dialog( True )
 				case curses.KEY_F8 :
 					# The Remove menu
-					if curses.KEY_F8 not in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys :
+					if curses.KEY_F8 not in self.m_lists[ self.m_selected_list_idx ].m_disabled_keys_list :
 						self.remove_menu()
 				case curses.KEY_F10 :
 					# The quit dialog
