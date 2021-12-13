@@ -83,7 +83,8 @@ def sqlite_dissect_table( p_db_file_name_str, p_table_name_str ) :
 
 
 
-def sqlite_run( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
+def sqlite_run( p_db_file_name_str, p_sql_query_str, p_values = None ) :
+	if p_values is None : p_values = {}
 	# Open the database file ( create if not exists )
 	l_dbcon = sqlite3.connect( p_db_file_name_str )
 	# Open a cursor to the database
@@ -106,7 +107,8 @@ def sqlite_run( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
 	return l_db_results
 
 
-def sqlite_run_v2( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
+def sqlite_run_v2( p_db_file_name_str, p_sql_query_str, p_values = None ) :
+	if p_values is None : p_values = {}
 	# Open the database file ( create if not exists )
 	l_dbcon = sqlite3.connect( p_db_file_name_str )
 	# Open a cursor to the database
@@ -130,7 +132,8 @@ def sqlite_run_v2( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
 
 
 
-def sqlite_get( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
+def sqlite_get( p_db_file_name_str, p_sql_query_str, p_values = None ) :
+	if p_values is None : p_values = {}
 	# Open the database file ( create if not exists )
 	l_dbcon = sqlite3.connect( p_db_file_name_str )
 	l_dbcon.row_factory = sqlite3.Row
@@ -146,15 +149,22 @@ def sqlite_get( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
 	l_cur_description = []
 	if l_cur.description :
 		for b_col in l_cur.description : l_cur_description.append( b_col[ 0 ] )
+	l_row_dicts_list = []
+	for db_row in l_db_rows :
+		l_table_row_dict = {}
+		for field_itr, field_val in enumerate( db_row ) :
+			l_table_row_dict |= { l_cur_description[ field_itr ] : field_val }
+		l_row_dicts_list.append( l_table_row_dict )
 	l_db_results = []
 	l_db_results.append( l_cur_description )
 	l_db_results.append( l_cur.rowcount )
-	l_db_results.append( l_db_rows )
+	l_db_results.append( l_row_dicts_list )
 	# Return results to the caller
 	return l_db_results
 
 
-def sqlite_get_v2( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
+def sqlite_get_v2( p_db_file_name_str, p_sql_query_str, p_values = None ) :
+	if p_values is None : p_values = {}
 	# Open the database file ( create if not exists )
 	l_dbcon = sqlite3.connect( p_db_file_name_str )
 	l_dbcon.row_factory = sqlite3.Row
@@ -166,21 +176,31 @@ def sqlite_get_v2( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
 	l_db_rows = l_cur.fetchall()
 	# Close connection
 	l_dbcon.close()
-	# Create a list containing three lists, a list of column names, number of rows returned, and a list of data rows
+	# Create three dicts, the first containing a list of column names,
+	# the second contains the number of rows returned, and the last containing the list of data rows
+	# The column names ( cursor.description )
 	l_cur_description = []
 	if l_cur.description :
 		for b_col in l_cur.description : l_cur_description.append( b_col[ 0 ] )
+	# The data rows
+	l_row_dicts_list = []
+	for db_row in l_db_rows :
+		l_table_row_dict = {}
+		for field_itr, field_val in enumerate( db_row ) :
+			l_table_row_dict |= { l_cur_description[ field_itr ] : field_val }
+		l_row_dicts_list.append( l_table_row_dict )
 	l_db_results = {}
 	l_db_results |= { 'description' : l_cur_description }
 	l_db_results |= { 'rowcount' : l_cur.rowcount }
-	l_db_results |= { 'rows' : l_db_rows }
+	l_db_results |= { 'rows' : l_row_dicts_list }
 	l_db_results |= { 'lastrowid' : l_cur.lastrowid }
 	# Return results to the caller
 	return l_db_results
 
 
 
-def sqlite_get_pretty( p_db_file_name_str, p_sql_query_str, p_values = {} ) :
+def sqlite_get_pretty( p_db_file_name_str, p_sql_query_str, p_values = None ) :
+	if p_values is None : p_values = {}
 	g_db_result = sqlite_get( p_db_file_name_str, p_sql_query_str, p_values )
 	g_head_cols = g_db_result[ 0 ]
 	g_col_width_list = []
