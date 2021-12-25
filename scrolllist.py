@@ -41,11 +41,11 @@ class ScrollList( object ) :
 				# Select item on index from vis cols list
 				for col_label_itr, col_label_val in enumerate( self.m_col_labels_list ) :
 					# Set width for columns corresponding to visible column
-					if col_label_itr < len( self.m_vis_cols_list ) :
-						if col_label_itr > 0 :
-							self.m_col_widths_list[ self.m_vis_cols_list[ col_label_itr ] ] = 1 + len( col_label_val )
-						else :
-							self.m_col_widths_list[ self.m_vis_cols_list[ col_label_itr ] ] = len( col_label_val )
+					if 0 < col_label_itr < len( self.m_vis_cols_list ) - 1 :
+						self.m_col_widths_list[ self.m_vis_cols_list[ col_label_itr ] ] = 1 + len( col_label_val )
+						print( f'self.m_col_widths_list[]: { self.m_col_widths_list }' )
+					else :
+						self.m_col_widths_list[ self.m_vis_cols_list[ col_label_itr ] ] = len( col_label_val )
 
 			if 'justify_list' in list( options.keys() ) and isinstance( options.get( 'justify_list' ), list ):
 				self.m_justify_list = options.get( 'justify_list' )
@@ -168,11 +168,6 @@ class ScrollList( object ) :
 			self.m_curses_win_obj.addnstr( 0 , 1, 'Empty', self.m_inner_cols_int, self._DARK_GRAY_AND_BLACK )
 		else :
 			# Write column names on first line of the window
-			#self.m_curses_win_obj.addnstr( 0 , 1, 'Column names', self.m_inner_cols_int, self._DARK_GRAY_AND_BLACK )
-			#debug_info( f'\nScrollList "{ self.m_name }" redraw:' )
-			#print( 'm_vis_cols_list: ', self.m_vis_cols_list )
-			#print( 'm_col_names_list:', self.m_col_names_list )
-			#print( 'm_col_widths_list: ', self.m_col_widths_list )
 			new_row_str = ''
 			l_width_available = self.m_inner_cols_int - 2 # - self.m_col_widths_list[ l_shown_cols_list[ -1 ] ]
 			#for col_labels_list_itr, col_labels_list_val in enumerate( self.m_col_labels_list ) :
@@ -342,8 +337,8 @@ class ScrollList( object ) :
 		# Append new item
 		self.m_items_list.append( p_new_item_dict )
 
-		#debug_info( f'\nScrollList "{ self.m_name }" add item:' )
-		#print( 'm_col_widths_list:' )
+		#debug_info( f'ScrollList "{ self.m_name }" add item:' )
+		#print( f'p_new_item_dict.values(): { p_new_item_dict.values() }' )
 		#print( f'before: { self.m_col_widths_list }' )
 
 		# Ensure the size of col_widths_list is large enough
@@ -359,7 +354,8 @@ class ScrollList( object ) :
 		# 	self.m_col_widths_list[ column_itr ] = max( self.m_col_widths_list[ column_itr ], len( str( p_new_item_dict[ list( p_new_item_dict.keys() )[ column_itr ] ] ) ) )
 		for field_itr, field_val in enumerate( p_new_item_dict.values() ) :
 			#print( f'type( field_val ): { type( field_val ) }  field_val: { field_val }' )
-			self.m_col_widths_list[ field_itr ] = max( self.m_col_widths_list[ field_itr ], 1 + len( str( field_val ) ) )
+			#self.m_col_widths_list[ field_itr ] = max( self.m_col_widths_list[ field_itr ], 1 + len( str( field_val ) ) )
+			self.m_col_widths_list[ field_itr ] = max( self.m_col_widths_list[ field_itr ], len( str( field_val ) ) )
 
 		#print( f' after: { self.m_col_widths_list }' )
 
